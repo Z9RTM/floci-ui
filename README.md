@@ -58,7 +58,7 @@ cd packages/api && bun run scripts/service-matrix.ts
 | Storage | Storage | Yes (list, create, delete, inspect) | Yes (list, create, delete, inspect) | Yes (list, create, delete, inspect) |
 | Databases | Database | Yes (list, inspect) | Yes (list, create, delete, inspect) | Yes (list, create, inspect, delete) |
 | Networking | Networking | Yes (list) | No | No |
-| Provisioning | CloudFormation / Infrastructure as Code | No | No | No |
+| Provisioning | CloudFormation / Infrastructure as Code | Yes (list, inspect, create, delete) | No | No |
 | Security | Secrets Manager / Key Vault | Yes (legacy page) | Yes (list, create, delete, inspect) | No |
 
 Console Home is available for all three clouds.
@@ -217,6 +217,22 @@ Current gaps:
 
 - Not migrated into the Cloud Explorer contract yet.
 - No Azure or GCP secret adapter yet.
+
+</details>
+
+<details>
+<summary><strong>Infrastructure as Code (Provisioning)</strong></summary>
+
+CloudFormation in Cloud Explorer via AWS SDK v3.
+
+- List stacks.
+- Inspect stack metadata, parameters, outputs, capabilities, status reasons, and timestamps.
+- Create stacks with JSON / YAML template bodies and optional capabilities.
+- Delete stacks.
+
+Current gaps:
+
+- No Azure (Resource Manager / Bicep) or GCP (Deployment Manager / Terraform) adapters yet.
 
 </details>
 

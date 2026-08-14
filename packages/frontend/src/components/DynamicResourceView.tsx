@@ -31,6 +31,7 @@ import type { CloudResource, StorageObject } from "@/types/resource";
 import type { ServiceSchema } from "@/types/schema";
 import { CosmosNoSqlPanel } from "@/components/CosmosNoSqlPanel";
 import { ServerlessInvokePanel } from "@/components/ServerlessInvokePanel";
+import { ProvisioningPanel, CreateStackForm } from "@/components/ProvisioningPanel";
 
 interface DynamicResourceViewProps {
   cloud: CloudProvider;
@@ -250,6 +251,15 @@ export function DynamicResourceView({
                     }}
                     onCancel={() => setCreateOpen(false)}
                   />
+                ) : service === "iac" && cloud === "aws" ? (
+                  <CreateStackForm
+                    cloud={cloud}
+                    onSuccess={(resource) => {
+                      setSelected(resource);
+                      setCreateOpen(false);
+                    }}
+                    onCancel={() => setCreateOpen(false)}
+                  />
                 ) : (
                   <DynamicFormRenderer
                     schema={schema}
@@ -288,6 +298,7 @@ export function DynamicResourceView({
           <ResourceInspector
             resource={activeSelected}
             object={selectedObject}
+            serviceDisplayName={schema.displayName}
           />
         )}
       </div>
@@ -323,12 +334,19 @@ export function DynamicResourceView({
         />
       )}
       {service === "serverless" && (
-  <ServerlessInvokePanel
-    cloud={cloud}
-    resource={activeSelected}
-    runtimeReachable={canUseRuntime}
-  />
-)}
+        <ServerlessInvokePanel
+          cloud={cloud}
+          resource={activeSelected}
+          runtimeReachable={canUseRuntime}
+        />
+      )}
+      {service === "iac" && cloud === "aws" && (
+        <ProvisioningPanel
+          cloud={cloud}
+          resource={activeSelected}
+          runtimeReachable={canUseRuntime}
+        />
+      )}
     </div>
   );
 }
@@ -361,6 +379,8 @@ function resourceCreateLabel(schema: ServiceSchema): string {
     return "Create database";
   if (schema.cloud === "azure" && schema.service === "secrets")
     return "Create secret";
+  if (schema.cloud === "aws" && schema.service === "iac")
+    return "Create stack";
   return "Create resource";
 }
 
