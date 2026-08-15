@@ -127,8 +127,21 @@ export class AwsStorageAdapter implements CloudServiceAdapter {
         }
     }
 
-    async putObject(resourceId: string, key: string, body: Uint8Array, contentType: string): Promise<void> {
+    async putObject(resourceId: string, key: string, body: Uint8Array, contentType: string): Promise<{url: string}> {
         await this.s3.send(new PutObjectCommand({Bucket: resourceId, Key: key, Body: body, ContentType: contentType}))
+        let url = ''
+        if (typeof this.s3.config.endpoint === 'function') {
+            const endpoint = await this.s3.config.endpoint()
+            if (endpoint) {
+                const pathPrefix = endpoint.path === '/' ? '/' : `${endpoint.path}/`
+                url = `${endpoint.protocol}//${endpoint.hostname}${endpoint.port ? ':' + endpoint.port : ''}${pathPrefix}${resourceId}/${key}`
+            }
+        }
+        if (!url) {
+            const base = typeof this.s3.config.endpoint === 'string' ? this.s3.config.endpoint : 'http://localhost:4566'
+            url = `${base}/${resourceId}/${key}`
+        }
+        return {url}
     }
 
     async getObject(resourceId: string, key: string): Promise<StorageObjectDownload> {

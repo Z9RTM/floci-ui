@@ -172,8 +172,8 @@ export function createCloudRoutes(injectedService?: CloudProxyService) {
         const body = new Uint8Array(await c.req.arrayBuffer())
         const contentType = c.req.header('content-type') ?? 'application/octet-stream'
         return withRuntime(c, async () => {
-            await svc(c).putObject(cloud, serviceType, c.req.param('id'), key, body, contentType)
-            return c.json({ok: true})
+            const result = await svc(c).putObject(cloud, serviceType, c.req.param('id'), key, body, contentType)
+            return c.json({ok: true, url: result?.url})
         })
     })
 

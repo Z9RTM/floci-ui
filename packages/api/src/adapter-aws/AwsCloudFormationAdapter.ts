@@ -56,7 +56,12 @@ export class AwsCloudFormationAdapter implements CloudServiceAdapter {
         if (!isValidStackName(stackName)) {
             throw new ValidationError('Stack name must begin with an alphabetic character and contain only letters, numbers, and hyphens.')
         }
-        if (!templateBody && !templateUrl) throw new ValidationError('templateBody or templateUrl is required')
+        if (!templateBody && !templateUrl) {
+            throw new ValidationError('templateBody or templateUrl is required')
+        }
+        if (templateBody && templateUrl) {
+            throw new ValidationError('Specify either templateBody or templateUrl, not both.')
+        }
 
         const capabilities = parseCapabilities(capabilitiesInput)
 
@@ -85,6 +90,9 @@ export class AwsCloudFormationAdapter implements CloudServiceAdapter {
                 stackId: res.StackId ?? null,
                 description: null,
                 capabilities: capabilities.length > 0 ? capabilities : undefined,
+                parameters: [],
+                outputs: [],
+                tags: [],
             },
         }
     }
@@ -118,7 +126,10 @@ function mapStackToResource(stack: Stack): CloudResource {
             capabilities: stack.Capabilities ?? [],
             parameters: stack.Parameters ?? [],
             outputs: stack.Outputs ?? [],
-            tags: stack.Tags ?? [],
+            tags: (stack.Tags ?? []).map((t) => ({
+                key: t.Key ?? '',
+                value: t.Value ?? '',
+            })),
         },
     }
 }

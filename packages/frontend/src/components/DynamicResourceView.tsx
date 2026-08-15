@@ -165,7 +165,7 @@ export function DynamicResourceView({
   const canCreate = schema.actions.includes("create");
   const activeSelected =
     selected?.cloud === cloud && selected.service === service
-      ? selected
+      ? (resources.find((r) => r.id === selected.id) ?? selected)
       : undefined;
   const runtimeReachable = cloudStatus?.runtime === "reachable";
   const resourceCapabilityInputs =

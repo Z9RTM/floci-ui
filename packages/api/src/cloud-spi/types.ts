@@ -245,7 +245,7 @@ export interface CloudServiceAdapter {
     create(input: CreateResourceInput): Promise<CloudResource>
     delete(id: string): Promise<void>
     listObjects?(resourceId: string, prefix?: string): Promise<StorageObjectList>
-    putObject?(resourceId: string, key: string, body: Uint8Array, contentType: string): Promise<void>
+    putObject?(resourceId: string, key: string, body: Uint8Array, contentType: string): Promise<void | {url?: string}>
     getObject?(resourceId: string, key: string): Promise<StorageObjectDownload>
     deleteObject?(resourceId: string, key: string): Promise<void>
     invoke?(id: string, payload: string): Promise<ServerlessInvokeResult>

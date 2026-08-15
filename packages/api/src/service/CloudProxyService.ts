@@ -219,10 +219,10 @@ async invokeResource(
         return adapter.listObjects(resourceId, prefix)
     }
 
-    async putObject(cloud: CloudProvider, service: CloudServiceType, resourceId: string, key: string, body: Uint8Array, contentType: string): Promise<void> {
+    async putObject(cloud: CloudProvider, service: CloudServiceType, resourceId: string, key: string, body: Uint8Array, contentType: string): Promise<void | {url?: string}> {
         const adapter = this.requireAdapter(cloud, service)
         if (!adapter.putObject) throw new NotSupportedError(`Object upload is not supported for ${cloud}/${service}`)
-        await adapter.putObject(resourceId, key, body, contentType)
+        return await adapter.putObject(resourceId, key, body, contentType)
     }
 
     async getObject(cloud: CloudProvider, service: CloudServiceType, resourceId: string, key: string): Promise<StorageObjectDownload> {

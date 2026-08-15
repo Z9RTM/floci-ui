@@ -393,8 +393,10 @@ function getTags(value: unknown): Array<{ key: string; value: string }> {
   return value.flatMap((item) => {
     if (!item || typeof item !== "object") return [];
     const tag = item as Record<string, unknown>;
-    return typeof tag.key === "string" && typeof tag.value === "string"
-      ? [{ key: tag.key, value: tag.value }]
+    const key = tag.key ?? tag.Key;
+    const val = tag.value ?? tag.Value;
+    return typeof key === "string" && typeof val === "string"
+      ? [{ key, value: val }]
       : [];
   });
 }

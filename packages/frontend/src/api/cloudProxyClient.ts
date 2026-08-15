@@ -178,8 +178,8 @@ export async function uploadStorageObject(
   key: string,
   file: File | Blob,
   signal?: AbortSignal,
-): Promise<void> {
-  await apiClient.call<void>(
+): Promise<{url?: string} | void> {
+  const res = await apiClient.call<{ok: boolean, url?: string}>(
     apiEndpointKeys.clouds.storage.objects.upload,
     requestOptions(cloud, "storage", {
       signal,
@@ -189,6 +189,7 @@ export async function uploadStorageObject(
     }),
     storagePathParams(cloud, resourceId),
   );
+  return res.data;
 }
 
 export function storageObjectDownloadUrl(

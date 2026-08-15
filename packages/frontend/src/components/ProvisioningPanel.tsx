@@ -1,9 +1,9 @@
-import { useState, useRef, type DragEvent, type ChangeEvent, type FormEvent } from "react";
+import { useState, useRef, useEffect, type DragEvent, type ChangeEvent, type FormEvent } from "react";
 import {
   CheckCircle2,
   Copy,
   FileCode,
-  Layers,
+  Globe,
   Loader2,
   Plus,
   Trash2,
@@ -28,6 +28,8 @@ interface CreateStackFormProps {
   onCancel: () => void;
 }
 
+type TemplateSource = "file" | "url";
+
 export function CreateStackForm({
   cloud,
   region = "us-east-1",
@@ -36,8 +38,11 @@ export function CreateStackForm({
 }: CreateStackFormProps) {
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const copyTimeoutRef = useRef<number | null>(null);
 
   const [stackName, setStackName] = useState("");
+  const [templateSource, setTemplateSource] = useState<TemplateSource>("file");
+  const [customS3Url, setCustomS3Url] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [templateBody, setTemplateBody] = useState("");
   const [s3Key, setS3Key] = useState<string | null>(null);
@@ -47,6 +52,14 @@ export function CreateStackForm({
   const [isDragOver, setIsDragOver] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current !== null) {
+        window.clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const createMut = useMutation({
     mutationFn: (values: Record<string, unknown>) =>
@@ -87,7 +100,6 @@ export function CreateStackForm({
     const timestamp = new Date().toISOString().replace(/[:]/g, "");
     const randomSuffix = Math.random().toString(36).slice(2, 5);
     const key = `${timestamp}${randomSuffix}-${file.name}`;
-    const url = `https://s3.${region}.amazonaws.com/${bucketName}/${key}`;
 
     setIsUploadingS3(true);
     try {
@@ -99,17 +111,18 @@ export function CreateStackForm({
       }
 
       // Upload template object
-      await uploadStorageObject("aws", bucketName, key, file);
+      const result = await uploadStorageObject("aws", bucketName, key, file);
+      const uploadedUrl = result?.url || `https://s3.${region}.amazonaws.com/${bucketName}/${key}`;
       setS3Key(key);
-      setS3Url(url);
-      setS3UploadNote("Uploaded to S3 template bucket");
+      setS3Url(uploadedUrl);
+      setS3UploadNote("Uploaded to storage bucket");
       void qc.invalidateQueries({
         queryKey: ["cloud-resources", "aws", "storage"],
       });
     } catch (err) {
-      // S3 runtime might be unavailable, but keep templateBody so creation still works
+      // S3 runtime might be unavailable, but keep templateBody so direct creation works
       setS3UploadNote(
-        `Local S3 upload skipped (${err instanceof Error ? err.message : "S3 offline"}). Template will be sent directly via TemplateBody.`,
+        `Local storage upload skipped (${err instanceof Error ? err.message : "Storage offline"}). Template will be sent directly.`,
       );
     } finally {
       setIsUploadingS3(false);
@@ -157,7 +170,10 @@ export function CreateStackForm({
     if (!s3Url) return;
     void navigator.clipboard.writeText(s3Url);
     setCopiedUrl(true);
-    window.setTimeout(() => setCopiedUrl(false), 1500);
+    if (copyTimeoutRef.current !== null) {
+      window.clearTimeout(copyTimeoutRef.current);
+    }
+    copyTimeoutRef.current = window.setTimeout(() => setCopiedUrl(false), 1500);
   }
 
   function handleSubmit(event: FormEvent) {
@@ -174,23 +190,44 @@ export function CreateStackForm({
       );
       return;
     }
-    if (!templateBody) {
-      setValidationError("Please select or upload a CloudFormation template file.");
-      return;
-    }
 
-    setValidationError(null);
-    createMut.mutate({
-      stackName: trimmedName,
-      templateBody,
-      templateUrl: s3Url || undefined,
-      region,
-      capabilities: [
-        "CAPABILITY_IAM",
-        "CAPABILITY_NAMED_IAM",
-        "CAPABILITY_AUTO_EXPAND",
-      ],
-    });
+    if (templateSource === "file") {
+      if (!templateBody) {
+        setValidationError("Please select or upload a CloudFormation template file.");
+        return;
+      }
+
+      setValidationError(null);
+      createMut.mutate({
+        stackName: trimmedName,
+        templateUrl: s3Url || undefined,
+        templateBody: s3Url ? undefined : templateBody,
+        region,
+        capabilities: [
+          "CAPABILITY_IAM",
+          "CAPABILITY_NAMED_IAM",
+          "CAPABILITY_AUTO_EXPAND",
+        ],
+      });
+    } else {
+      const trimmedUrl = customS3Url.trim();
+      if (!trimmedUrl) {
+        setValidationError("Please specify a Storage URL.");
+        return;
+      }
+
+      setValidationError(null);
+      createMut.mutate({
+        stackName: trimmedName,
+        templateUrl: trimmedUrl,
+        region,
+        capabilities: [
+          "CAPABILITY_IAM",
+          "CAPABILITY_NAMED_IAM",
+          "CAPABILITY_AUTO_EXPAND",
+        ],
+      });
+    }
   }
 
   return (
@@ -220,90 +257,139 @@ export function CreateStackForm({
       <div className="dynamic-form-group">Template Specification</div>
 
       <div className="dynamic-field dynamic-field--span">
-        <span>
-          Upload a template file <em className="field-required">*</em>
-        </span>
-
-        {!selectedFile ? (
-          <div
-            className={`template-dropzone ${isDragOver ? "dropzone-active" : ""}`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
+        <span>Specify template source</span>
+        <div className="template-source-selector">
+          <button
+            type="button"
+            className={`template-source-btn${templateSource === "file" ? " active" : ""}`}
+            onClick={() => {
+              setTemplateSource("file");
+              setValidationError(null);
+            }}
           >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".yaml,.yml,.json,.template,text/yaml,application/json,text/plain"
-              style={{ display: "none" }}
-              onChange={handleFileChange}
-            />
-            <UploadCloud size={28} className="dropzone-icon" />
-            <div className="dropzone-text">
-              <strong>Drag and drop template file here</strong>
-              <span>or click to browse from your computer (.yaml, .yml, .json)</span>
-            </div>
-          </div>
-        ) : (
-          <div className="template-selected-box">
-            <div className="file-badge">
-              <FileCode size={20} className="file-badge-icon" />
-              <div className="file-badge-info">
-                <strong>{selectedFile.name}</strong>
-                <span>{formatBytes(selectedFile.size)}</span>
-              </div>
-              <button
-                type="button"
-                className="icon-btn danger"
-                onClick={handleClearFile}
-                title="Remove template file"
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-
-            {isUploadingS3 && (
-              <div className="s3-status uploading">
-                <Loader2 size={13} className="spin" />
-                <span>Uploading template to local S3 bucket...</span>
-              </div>
-            )}
-
-            {s3Url && !isUploadingS3 && (
-              <div className="s3-url-card">
-                <div className="s3-url-header">
-                  <span className="badge healthy">
-                    <CheckCircle2 size={11} style={{ marginRight: 3 }} />
-                    S3 Stored
-                  </span>
-                  <button
-                    type="button"
-                    className="button compact"
-                    onClick={copyS3Url}
-                    title="Copy S3 URL"
-                  >
-                    <Copy size={12} />
-                    {copiedUrl ? "Copied" : "Copy URL"}
-                  </button>
-                </div>
-                <div className="s3-url-text mono">{s3Url}</div>
-                {s3Key && (
-                  <div className="muted compact-text mono" style={{ fontSize: 10 }}>
-                    Key: {s3Key}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {s3UploadNote && !s3Url && (
-              <p className="muted compact-text" style={{ margin: "4px 0 0" }}>
-                {s3UploadNote}
-              </p>
-            )}
-          </div>
-        )}
+            <UploadCloud size={14} />
+            Upload a template file
+          </button>
+          <button
+            type="button"
+            className={`template-source-btn${templateSource === "url" ? " active" : ""}`}
+            onClick={() => {
+              setTemplateSource("url");
+              setValidationError(null);
+            }}
+          >
+            <Globe size={14} />
+            Storage URL
+          </button>
+        </div>
       </div>
+
+      {templateSource === "file" ? (
+        <div className="dynamic-field dynamic-field--span">
+          <span>
+            Upload a template file <em className="field-required">*</em>
+          </span>
+
+          {!selectedFile ? (
+            <div
+              className={`template-dropzone ${isDragOver ? "dropzone-active" : ""}`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".yaml,.yml,.json,.template,text/yaml,application/json,text/plain"
+                style={{ display: "none" }}
+                onChange={handleFileChange}
+              />
+              <UploadCloud size={28} className="dropzone-icon" />
+              <div className="dropzone-text">
+                <strong>Drag and drop template file here</strong>
+                <span>or click to browse from your computer (.yaml, .yml, .json)</span>
+              </div>
+            </div>
+          ) : (
+            <div className="template-selected-box">
+              <div className="file-badge">
+                <FileCode size={20} className="file-badge-icon" />
+                <div className="file-badge-info">
+                  <strong>{selectedFile.name}</strong>
+                  <span>{formatBytes(selectedFile.size)}</span>
+                </div>
+                <button
+                  type="button"
+                  className="icon-btn danger"
+                  onClick={handleClearFile}
+                  title="Remove template file"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+
+              {isUploadingS3 && (
+                <div className="s3-status uploading">
+                  <Loader2 size={13} className="spin" />
+                  <span>Uploading template to local storage...</span>
+                </div>
+              )}
+
+              {s3Url && !isUploadingS3 && (
+                <div className="s3-url-card">
+                  <div className="s3-url-header">
+                    <span className="badge healthy">
+                      <CheckCircle2 size={11} style={{ marginRight: 3 }} />
+                      Stored
+                    </span>
+                    <button
+                      type="button"
+                      className="button compact"
+                      onClick={copyS3Url}
+                      title="Copy Storage URL"
+                    >
+                      <Copy size={12} />
+                      {copiedUrl ? "Copied" : "Copy URL"}
+                    </button>
+                  </div>
+                  <div className="s3-url-text mono">{s3Url}</div>
+                  {s3Key && (
+                    <div className="muted compact-text mono" style={{ fontSize: 10 }}>
+                      Key: {s3Key}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {s3UploadNote && !s3Url && (
+                <p className="muted compact-text" style={{ margin: "4px 0 0" }}>
+                  {s3UploadNote}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        <label className="dynamic-field dynamic-field--span">
+          <span>
+            Storage URL <em className="field-required">*</em>
+          </span>
+          <input
+            className="input mono"
+            value={customS3Url}
+            onChange={(e) => {
+              setCustomS3Url(e.target.value);
+              setValidationError(null);
+            }}
+            placeholder="e.g. http://localhost:4566/my-bucket/template.yaml"
+            required
+          />
+          <small>
+            Specify the URL of a template file located in a storage bucket in your Floci local environment.
+          </small>
+        </label>
+      )}
 
       {validationError && <div className="form-error">{validationError}</div>}
       {createMut.isError && (
@@ -318,7 +404,12 @@ export function CreateStackForm({
         <button
           className="button primary"
           type="submit"
-          disabled={!stackName.trim() || !templateBody || isUploadingS3 || createMut.isPending}
+          disabled={
+            !stackName.trim() ||
+            (templateSource === "file" && (!templateBody || isUploadingS3)) ||
+            (templateSource === "url" && !customS3Url.trim()) ||
+            createMut.isPending
+          }
         >
           {createMut.isPending ? (
             <>
@@ -361,6 +452,15 @@ export function ProvisioningPanel({
 }: ProvisioningPanelProps) {
   const [tab, setTab] = useState<"parameters" | "outputs" | "details">("parameters");
   const [copiedId, setCopiedId] = useState(false);
+  const copyTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current !== null) {
+        window.clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (cloud !== "aws" || !runtimeReachable || !resource || resource.service !== "iac") {
     return null;
@@ -403,7 +503,10 @@ export function ProvisioningPanel({
   function copyStackId() {
     void navigator.clipboard.writeText(stackId);
     setCopiedId(true);
-    window.setTimeout(() => setCopiedId(false), 1500);
+    if (copyTimeoutRef.current !== null) {
+      window.clearTimeout(copyTimeoutRef.current);
+    }
+    copyTimeoutRef.current = window.setTimeout(() => setCopiedId(false), 1500);
   }
 
   return (
@@ -412,7 +515,6 @@ export function ProvisioningPanel({
         <div>
           <p className="eyebrow">Stack Inspection</p>
           <h3>
-            <Layers size={15} />
             {resource.name}
           </h3>
           {description && <p className="muted compact-text">{description}</p>}
@@ -420,24 +522,24 @@ export function ProvisioningPanel({
         <span className="badge neutral">{resource.status ?? "UNKNOWN"}</span>
       </div>
 
-      <div className="sns-tabs" style={{ padding: "0 12px" }}>
+      <div className="cfn-tabs" style={{ padding: "0 12px" }}>
         <button
           type="button"
-          className={`sns-tab${tab === "parameters" ? " active" : ""}`}
+          className={`cfn-tab${tab === "parameters" ? " active" : ""}`}
           onClick={() => setTab("parameters")}
         >
           Parameters ({parameters.length})
         </button>
         <button
           type="button"
-          className={`sns-tab${tab === "outputs" ? " active" : ""}`}
+          className={`cfn-tab${tab === "outputs" ? " active" : ""}`}
           onClick={() => setTab("outputs")}
         >
           Outputs ({outputs.length})
         </button>
         <button
           type="button"
-          className={`sns-tab${tab === "details" ? " active" : ""}`}
+          className={`cfn-tab${tab === "details" ? " active" : ""}`}
           onClick={() => setTab("details")}
         >
           Details & Tags
@@ -571,10 +673,10 @@ export function ProvisioningPanel({
                 <span className="meta-label">Tags</span>
                 <div className="metadata-tags">
                   {tags.map((tag, i) => {
-                    const key = tag.Key ?? tag.key ?? "";
-                    const val = tag.Value ?? tag.value ?? "";
+                    const key = tag.key ?? tag.Key ?? "";
+                    const val = tag.value ?? tag.Value ?? "";
                     return (
-                      <span className="metadata-tag" key={i}>
+                      <span className="metadata-tag" key={`${key}:${val}-${i}`}>
                         <strong>{key}</strong>
                         <span>{val}</span>
                       </span>
@@ -589,7 +691,3 @@ export function ProvisioningPanel({
     </section>
   );
 }
-
-// Backwards-compatible aliases
-export const IacPanel = ProvisioningPanel;
-export const CloudFormationPanel = ProvisioningPanel;

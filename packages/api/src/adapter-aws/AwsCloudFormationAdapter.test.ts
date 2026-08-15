@@ -284,4 +284,27 @@ describe('AwsCloudFormationAdapter', () => {
 
         expect(deletedStackName).toBe('stack-to-delete')
     })
+
+    test('normalizes tags to { key, value } lower-case format', async () => {
+        const client = fakeClient(async () => ({
+            Stacks: [baseStack],
+        }))
+
+        const adapter = new AwsCloudFormationAdapter(client)
+        const result = await adapter.get('my-stack')
+        expect(result?.metadata.tags).toEqual([{key: 'Owner', value: 'Admin'}])
+    })
+
+    test('throws validation error when both templateBody and templateUrl are provided', async () => {
+        const adapter = new AwsCloudFormationAdapter(fakeClient(async () => ({})))
+        await expect(
+            adapter.create({
+                values: {
+                    stackName: 'my-stack',
+                    templateBody: 'Resources: {}',
+                    templateUrl: 'https://s3.amazonaws.com/bucket/template.yaml',
+                },
+            }),
+        ).rejects.toThrow('Specify either templateBody or templateUrl, not both.')
+    })
 })
