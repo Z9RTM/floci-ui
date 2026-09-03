@@ -13,6 +13,7 @@ export type KnownCloudServiceType =
     | 'secrets'
     | 'iac'
     | 'email'
+    | 'scheduler'
 
 /**
  * Deliberately open where the API's own type is closed.

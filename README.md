@@ -59,12 +59,13 @@ cd packages/api && bun run scripts/service-matrix.ts
 | Databases | Database | Yes (list, inspect) | Yes (list, create, delete, inspect) | Yes (list, create, inspect, delete) |
 | Databases | DynamoDB / Cosmos DB NoSQL / NoSQL | Yes (list, create, delete, inspect) | Yes (list, create, delete, inspect) | No |
 | Networking | Networking | Yes (list) | No | No |
-| Integration | Step Functions / Workflows | Yes (list, create, delete, inspect) | No | No |
 | Networking | ELB / Load Balancing | Yes (list, create, delete, inspect) | No | No |
+| Integration | SQS / Messaging / Pub/Sub | Yes (list, create, inspect, delete) | Yes (list, create, delete, inspect) | Yes (list, create, inspect, delete) |
 | Integration | API Gateway | Yes (list, create, delete, inspect) | No | No |
 | Integration | EventBridge / Events | Yes (list, create, delete, inspect) | No | No |
 | Integration | SES Mailbox / Email | Yes (list, inspect) | No | No |
-| Integration | SQS / Service Bus / Pub/Sub | Yes (list, create, inspect, delete) | Yes (list, create, delete, inspect) | Yes (list, create, inspect, delete) |
+| Integration | Cloud Scheduler | No | No | Yes (list, create, delete, inspect) |
+| Integration | Step Functions / Workflows | Yes (list, create, delete, inspect) | No | No |
 | Provisioning | CloudFormation / Infrastructure as Code | Yes (list, create, delete, inspect) | No | No |
 | Security | Identity | Yes (list, create, delete, inspect) | No | No |
 | Security | Secrets Manager / Key Vault / Secret Manager | Yes (list, create, inspect, delete) | Yes (list, create, delete, inspect) | Yes (list, create, inspect, delete) |

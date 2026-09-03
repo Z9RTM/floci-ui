@@ -1,6 +1,7 @@
 import {
     Boxes,
     Circle,
+    Clock,
     Database,
     HardDrive,
     KeyRound,
@@ -50,6 +51,7 @@ const SERVICE_ICONS: Record<string, LucideIcon> = {
     kms: Lock,
     loadbalancing: Scale,
     parameters: SlidersHorizontal,
+    scheduler: Clock,
     workflows: Workflow,
 }
 

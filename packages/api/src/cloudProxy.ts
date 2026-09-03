@@ -16,6 +16,7 @@ import {GcpCloudSqlAdapter} from './adapter-gcp/GcpCloudSqlAdapter'
 import {GcpGkeAdapter} from './adapter-gcp/GcpGkeAdapter'
 import {GcpPubSubAdapter} from './adapter-gcp/GcpPubSubAdapter'
 import {GcpSecretManagerAdapter} from './adapter-gcp/GcpSecretManagerAdapter'
+import {GcpSchedulerAdapter} from './adapter-gcp/GcpSchedulerAdapter'
 import {AwsSqsAdapter} from './adapter-aws/AwsSqsAdapter'
 import {CloudProxyService} from './service/CloudProxyService'
 import {AzureServerlessAdapter} from './adapter-azure/AzureServerlessAdapter'
@@ -74,6 +75,7 @@ export function createCloudAdapterRegistry(accountId?: string | null): CloudAdap
         new GcpGkeAdapter(),
         new GcpPubSubAdapter(),
         new GcpSecretManagerAdapter(),
+        new GcpSchedulerAdapter(),
         new AwsSqsAdapter(clients.sqs),
         new AzureServerlessAdapter(),
         new AzureKeyVaultAdapter(),
