@@ -56,7 +56,7 @@ cd packages/api && bun run scripts/service-matrix.ts
 | Compute | EKS / AKS / GKE | Yes (list, inspect) | No | Yes (list, create, inspect, delete) |
 | Compute | Serverless | Yes (list, create, inspect, delete) | Runtime gap | Yes (list, create, inspect, delete) |
 | Storage | Storage | Yes (list, create, delete, inspect) | Yes (list, create, delete, inspect) | Yes (list, create, delete, inspect) |
-| Databases | Database | Yes (list, create, delete, inspect) | Yes (list, create, delete, inspect) | Yes (list, create, delete, inspect) |
+| Databases | Database | Yes (list, create, update, delete, inspect) | Yes (list, create, delete, inspect) | Yes (list, create, inspect, delete) |
 | Databases | DynamoDB / Cosmos DB NoSQL / NoSQL | Yes (list, create, delete, inspect) | Yes (list, create, delete, inspect) | No |
 | Networking | Networking | Yes (list) | No | No |
 | Networking | ELB / Load Balancing | Yes (list, create, delete, inspect) | No | No |
@@ -136,7 +136,7 @@ Current gaps:
 
 Relational and document database workflows across providers:
 
-- AWS RDS: list, inspect, create, and delete DB instances (PostgreSQL, MySQL, MariaDB) with provider defaults (class `db.t3.micro`, storage 20 GB, username `root`).
+- AWS RDS: list, inspect, create, update, and delete DB instances (PostgreSQL, MySQL, MariaDB) with provider defaults (class `db.t3.micro`, storage 20 GB, username `root`). Updates use generic `PATCH /api/clouds/:cloud/services/:service/resources/:id` mapping to `ModifyDBInstance` for password rotation, IAM authentication, DB subnet group, VPC security groups, option group, and auto minor version upgrade. Instance class, storage, engine, and version are omitted from edit operations because the current local Floci RDS emulator does not support modifying them.
 - AWS RDS Snapshots: account-scoped Snapshots tab listing DB snapshots and supporting snapshot creation.
 - Azure Cosmos DB NoSQL: database, container, and document workflows.
 - Azure SQL and PostgreSQL Flexible Server: instance management and SQL query editor.
@@ -152,7 +152,7 @@ Cosmos DB includes:
 Current gaps:
 
 - AWS RDS snapshot creation: the Cloud Proxy operation is available, but the current Floci runtime does not implement `CreateDBSnapshot` (returns a typed 501 `operation_not_implemented`). Snapshot listing returns a valid empty list.
-- AWS RDS instance stop/start and update operations are not implemented in the current local Floci runtime.
+- AWS RDS instance stop/start operations are not implemented in the current local Floci runtime.
 - AWS DynamoDB is not rebuilt into the new Cloud Explorer model yet.
 
 </details>
