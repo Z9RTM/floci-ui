@@ -1,7 +1,10 @@
 import {
+  CreateDBInstanceCommand,
   CreateDBSnapshotCommand,
+  DeleteDBInstanceCommand,
   DescribeDBInstancesCommand,
   DescribeDBSnapshotsCommand,
+  type CreateDBInstanceCommandInput,
   type DBInstance,
   type DBSnapshot,
   type RDSClient,
@@ -158,25 +161,34 @@ export function createRdsService(client: RDSClient = awsClients.rds) {
       return toRdsInstance(res.DBInstances?.[0] ?? {});
     },
 
+    async createInstance(input: CreateDBInstanceCommandInput): Promise<RdsInstance> {
+      const res = await client.send(new CreateDBInstanceCommand(input));
+      return toRdsInstance(res.DBInstance ?? {});
+    },
+
+    async deleteInstance(identifier: string): Promise<void> {
+      await client.send(
+        new DeleteDBInstanceCommand({
+          DBInstanceIdentifier: identifier,
+          SkipFinalSnapshot: true,
+        }),
+      );
+    },
+
     async listSnapshots(instanceIdentifier?: string): Promise<RdsSnapshot[]> {
       const snapshots: RdsSnapshot[] = [];
       let marker: string | undefined;
 
-      try {
-        do {
-          const res = await client.send(
-            new DescribeDBSnapshotsCommand({
-              DBInstanceIdentifier: instanceIdentifier,
-              Marker: marker,
-            }),
-          );
-          snapshots.push(...(res.DBSnapshots ?? []).map(toRdsSnapshot));
-          marker = res.Marker;
-        } while (marker);
-      } catch (error) {
-        if (isUnsupportedOperation(error)) return [];
-        throw error;
-      }
+      do {
+        const res = await client.send(
+          new DescribeDBSnapshotsCommand({
+            DBInstanceIdentifier: instanceIdentifier,
+            Marker: marker,
+          }),
+        );
+        snapshots.push(...(res.DBSnapshots ?? []).map(toRdsSnapshot));
+        marker = res.Marker;
+      } while (marker);
 
       return snapshots;
     },
@@ -191,10 +203,6 @@ export function createRdsService(client: RDSClient = awsClients.rds) {
       return toRdsSnapshot(res.DBSnapshot ?? {});
     },
   };
-}
-
-function isUnsupportedOperation(error: unknown) {
-  return error instanceof Error && error.message.includes("is not supported");
 }
 
 export const rdsService = createRdsService();
