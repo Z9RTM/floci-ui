@@ -4,6 +4,8 @@ import type {FieldSchema, ServiceSchema} from '@/types/schema'
 
 interface DynamicFormRendererProps {
     schema: ServiceSchema
+    fields?: FieldSchema[]
+    initialValues?: Record<string, unknown>
     isSubmitting: boolean
     submitLabel?: string
     pendingLabel?: string
@@ -11,18 +13,36 @@ interface DynamicFormRendererProps {
     onSubmit: (values: Record<string, unknown>) => void
 }
 
-export function DynamicFormRenderer({schema, isSubmitting, submitLabel = 'Create', pendingLabel = 'Creating', submitError, onSubmit}: DynamicFormRendererProps) {
+export function DynamicFormRenderer({
+    schema,
+    fields,
+    initialValues,
+    isSubmitting,
+    submitLabel = 'Create',
+    pendingLabel = 'Creating',
+    submitError,
+    onSubmit,
+}: DynamicFormRendererProps) {
+    const activeFields = fields ?? schema.fields
     const [values, setValues] = useState<Record<string, string>>({})
     const [errors, setErrors] = useState<Record<string, string>>({})
 
     useEffect(() => {
-        setValues(defaultValues(schema.fields))
+        const defaults = defaultValues(activeFields)
+        if (initialValues) {
+            for (const [key, val] of Object.entries(initialValues)) {
+                if (val !== undefined && val !== null) {
+                    defaults[key] = String(val)
+                }
+            }
+        }
+        setValues(defaults)
         setErrors({})
-    }, [schema])
+    }, [activeFields, initialValues])
 
     function submit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
-        const nextErrors = validateValues(schema.fields, values)
+        const nextErrors = validateValues(activeFields, values)
         setErrors(nextErrors)
         if (Object.keys(nextErrors).length > 0) return
         onSubmit(values)
@@ -30,7 +50,7 @@ export function DynamicFormRenderer({schema, isSubmitting, submitLabel = 'Create
 
     return (
         <form className="dynamic-form" onSubmit={submit} noValidate>
-            {schema.fields.map((field) => (
+            {activeFields.map((field) => (
                 <FieldRow
                     key={field.name}
                     field={field}
@@ -49,7 +69,7 @@ export function DynamicFormRenderer({schema, isSubmitting, submitLabel = 'Create
                 />
             ))}
             <button className="button primary" type="submit" disabled={isSubmitting}>
-                <Plus size={14}/>
+                {submitLabel === 'Create' && <Plus size={14}/>}
                 {isSubmitting ? pendingLabel : submitLabel}
             </button>
             {submitError && <div className="form-error" role="alert">{submitError}</div>}

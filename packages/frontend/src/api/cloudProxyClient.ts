@@ -142,6 +142,25 @@ export async function createCloudResource(
   return res.data;
 }
 
+export async function updateCloudResource(
+  cloud: CloudProvider,
+  service: CloudServiceType,
+  id: string,
+  values: Record<string, unknown>,
+  signal?: AbortSignal,
+): Promise<CloudResource> {
+  const timeout =
+    (cloud === "azure" || cloud === "aws") && service === "database"
+      ? DATABASE_MUTATION_TIMEOUT_MS
+      : undefined;
+  const res = await apiClient.call<CloudResource, Record<string, unknown>>(
+    apiEndpointKeys.clouds.resources.update,
+    requestOptions(cloud, service, { signal, body: values, timeout }),
+    { cloud, service, id },
+  );
+  return res.data;
+}
+
 export async function deleteCloudResource(
   cloud: CloudProvider,
   service: CloudServiceType,
