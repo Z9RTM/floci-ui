@@ -55,6 +55,10 @@ export const apiEndpointKeys = {
         tables: "clouds.services.database.sql.tables.list",
         query: "clouds.services.database.sql.query",
       },
+      snapshots: {
+        list: "clouds.services.database.snapshots.list",
+        create: "clouds.services.database.snapshots.create",
+      },
     },
     k8s: {
       nodegroups: {
@@ -404,6 +408,22 @@ export const endpointRegistry: EndpointRegistry = new Map([
     apiEndpointKeys.clouds.database.sql.query,
     {
       path: "/clouds/:cloud/services/database/resources/:id/sql/query",
+      method: "POST",
+      telemetry: { service: "cloud-proxy" },
+    },
+  ],
+  [
+    apiEndpointKeys.clouds.database.snapshots.list,
+    {
+      path: "/clouds/:cloud/services/database/snapshots",
+      method: "GET",
+      telemetry: { service: "cloud-proxy" },
+    },
+  ],
+  [
+    apiEndpointKeys.clouds.database.snapshots.create,
+    {
+      path: "/clouds/:cloud/services/database/snapshots",
       method: "POST",
       telemetry: { service: "cloud-proxy" },
     },
