@@ -28,6 +28,7 @@ import type {
     ServiceSchema,
     StorageObjectDownload,
     StorageObjectList,
+    UpdateResourceInput,
 } from '../cloud-spi/types'
 import {NotSupportedError} from '../cloud-spi/errors'
 import {CloudAdapterRegistry} from '../registry/CloudAdapterRegistry'
@@ -209,6 +210,12 @@ export class CloudProxyService {
 
     async createResource(cloud: CloudProvider, service: CloudServiceType, input: CreateResourceInput): Promise<CloudResource> {
         return this.requireAdapter(cloud, service).create(input)
+    }
+
+    async updateResource(cloud: CloudProvider, service: CloudServiceType, id: string, input: UpdateResourceInput): Promise<CloudResource> {
+        const adapter = this.requireAdapter(cloud, service)
+        if (!adapter.update) throw new NotSupportedError(`Resource updates are not supported for ${cloud}/${service}`)
+        return adapter.update(id, input)
     }
 
     async deleteResource(cloud: CloudProvider, service: CloudServiceType, id: string): Promise<void> {

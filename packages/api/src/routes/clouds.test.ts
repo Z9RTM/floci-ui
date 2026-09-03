@@ -884,4 +884,69 @@ describe('per-service status', () => {
             'delete-fargate:demo:default',
         ])
     })
+
+    test('routes PATCH to the adapter update method', async () => {
+        let updatedId = ''
+        let updatedValues: Record<string, unknown> = {}
+        const app = appWithRoutes([
+            mockAdapter('aws', {
+                service: 'database',
+                schema: awsDatabaseSchema,
+                update: async (id, input) => {
+                    updatedId = id
+                    updatedValues = input.values
+                    return {
+                        id,
+                        name: id,
+                        cloud: 'aws',
+                        service: 'database',
+                        type: 'db-instance',
+                        region: 'us-east-1',
+                        createdAt: null,
+                        metadata: input.values,
+                    }
+                },
+            }),
+        ])
+
+        const res = await app.request('/api/clouds/aws/services/database/resources/orders-db', {
+            method: 'PATCH',
+            headers: {'content-type': 'application/json'},
+            body: JSON.stringify({autoMinorVersionUpgrade: 'true'}),
+        })
+
+        expect(res.status).toBe(200)
+        expect(updatedId).toBe('orders-db')
+        expect(updatedValues).toEqual({autoMinorVersionUpgrade: 'true'})
+    })
+
+    test('returns 501 when the adapter does not implement update', async () => {
+        const app = appWithRoutes([mockAdapter('aws', {service: 'database', schema: awsDatabaseSchema})])
+        const res = await app.request('/api/clouds/aws/services/database/resources/orders-db', {
+            method: 'PATCH',
+            headers: {'content-type': 'application/json'},
+            body: JSON.stringify({autoMinorVersionUpgrade: 'true'}),
+        })
+        expect(res.status).toBe(501)
+    })
+
+    test('maps adapter ValidationError on PATCH to 400', async () => {
+        const app = appWithRoutes([
+            mockAdapter('aws', {
+                service: 'database',
+                schema: awsDatabaseSchema,
+                update: async () => {
+                    throw new ValidationError('Invalid password')
+                },
+            }),
+        ])
+        const res = await app.request('/api/clouds/aws/services/database/resources/orders-db', {
+            method: 'PATCH',
+            headers: {'content-type': 'application/json'},
+            body: JSON.stringify({masterUserPassword: 'short'}),
+        })
+        expect(res.status).toBe(400)
+        const body = await res.json()
+        expect(body.message).toBe('Invalid password')
+    })
 })

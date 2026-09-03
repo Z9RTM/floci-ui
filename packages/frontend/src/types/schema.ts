@@ -1,12 +1,13 @@
 import type {CloudProvider, CloudServiceType} from './cloud'
 
 export type FieldType = 'text' | 'textarea' | 'password' | 'select'
-export type ActionSchema = 'list' | 'create' | 'delete' | 'inspect'
+export type ActionSchema = 'list' | 'create' | 'update' | 'delete' | 'inspect'
 // Mirrors packages/api/src/cloud-spi/types.ts. Lifecycle verbs can be advertised
 // in a capability block even though they are not table-level controls.
 export type ResourceActionName =
     | 'list'
     | 'create'
+    | 'update'
     | 'delete'
     | 'inspect'
     | 'invoke'
@@ -43,6 +44,7 @@ export interface FieldSchema {
     description?: string
     group?: string
     span?: boolean
+    valuePath?: string
     defaultValue?: string
     validation?: {
         pattern?: string
@@ -80,4 +82,5 @@ export interface ServiceSchema {
     }
     filters: FieldSchema[]
     columns: TableColumnSchema[]
+    updateFields?: FieldSchema[]
 }

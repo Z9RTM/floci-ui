@@ -75,6 +75,7 @@ export interface FieldSchema {
     description?: string
     group?: string
     span?: boolean
+    valuePath?: string
     defaultValue?: string
     validation?: {
         pattern?: string
@@ -90,10 +91,11 @@ export interface FieldSchema {
  * generic view renders; `ResourceActionName` additionally covers lifecycle verbs
  * that a capability block can describe but that are not table-level controls.
  */
-export type ActionSchema = 'list' | 'create' | 'delete' | 'inspect'
+export type ActionSchema = 'list' | 'create' | 'update' | 'delete' | 'inspect'
 export type ResourceActionName =
     | 'list'
     | 'create'
+    | 'update'
     | 'delete'
     | 'inspect'
     | 'invoke'
@@ -156,6 +158,7 @@ export interface ServiceSchema {
     }
     filters: FieldSchema[]
     columns: TableColumnSchema[]
+    updateFields?: FieldSchema[]
 }
 
 export type KnownResourceType =
@@ -347,6 +350,10 @@ export interface ResourceQuery {
 export interface CreateResourceInput {
     values: Record<string, unknown>
 }
+
+export interface UpdateResourceInput {
+    values: Record<string, unknown>
+}
 export interface ServerlessInvokeResult {
     statusCode: number
     payload: string
@@ -377,6 +384,7 @@ export interface CloudServiceAdapter {
     list(query?: ResourceQuery): Promise<CloudResource[]>
     get(id: string): Promise<CloudResource | null>
     create(input: CreateResourceInput): Promise<CloudResource>
+    update?(id: string, input: UpdateResourceInput): Promise<CloudResource>
     delete(id: string): Promise<void>
     listObjects?(resourceId: string, prefix?: string): Promise<StorageObjectList>
     putObject?(resourceId: string, key: string, body: Uint8Array, contentType: string): Promise<void>

@@ -20,6 +20,7 @@ const CLOUDS: CloudProvider[] = ['aws', 'azure', 'gcp']
 const METHOD_FOR_ACTION: Record<ResourceActionName, keyof CloudServiceAdapter> = {
     list: 'list',
     create: 'create',
+    update: 'update',
     delete: 'delete',
     inspect: 'get',
     invoke: 'invoke',
