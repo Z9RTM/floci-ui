@@ -200,7 +200,7 @@ export function DynamicResourceView({
     serviceAvailability,
   );
   const createCapability = capabilityFor(resourceCapabilities, "create");
-  const createResourceLabel = resourceCreateLabel(schema);
+  const createResourceLabel = createCapability?.label ?? "Create resource";
   const canUseRuntime = runtimeReachable && adapterAvailable;
   const canCreateResource =
     canUseRuntime && capabilityEnabled(createCapability);
@@ -394,12 +394,12 @@ export function DynamicResourceView({
         />
       )}
       {service === "serverless" && (
-  <ServerlessInvokePanel
-    cloud={cloud}
-    resource={activeSelected}
-    runtimeReachable={canUseRuntime}
-  />
-)}
+        <ServerlessInvokePanel
+          cloud={cloud}
+          resource={activeSelected}
+          runtimeReachable={canUseRuntime}
+        />
+      )}
       {service === "nosql" && cloud === "aws" && (
         <DynamoDbTableExplorer
           cloud={cloud}
@@ -428,34 +428,6 @@ function TopbarServiceInfo({ onOpenInfo }: { onOpenInfo: () => void }) {
     </button>,
     slot,
   );
-}
-
-const GENERIC_CREATE_LABEL = "Create resource";
-
-function resourceCreateLabel(schema: ServiceSchema): string {
-  const fromSchema = schema.capabilities?.resourceActions?.find(
-    (action) => typeof action !== "string" && action.name === "create",
-  );
-  const label = typeof fromSchema === "string" ? undefined : fromSchema?.label;
-  if (label && label !== GENERIC_CREATE_LABEL) return label;
-
-  if (schema.cloud === "aws" && schema.service === "storage")
-    return "Create bucket";
-  if (schema.cloud === "azure" && schema.service === "storage")
-    return "Create container";
-  if (schema.cloud === "azure" && schema.service === "database")
-    return "Create database server";
-  if (schema.cloud === "azure" && schema.service === "nosql")
-    return "Create Cosmos database";
-  if (schema.cloud === "aws" && schema.service === "identity")
-    return "Create user";
-  if (schema.cloud === "aws" && schema.service === "nosql")
-    return "Create table";
-  if (schema.cloud === "azure" && schema.service === "secrets")
-    return "Create secret";
-  if (schema.cloud === "aws" && schema.service === "apigateway")
-    return "Create API";
-  return GENERIC_CREATE_LABEL;
 }
 
 function StatusTile({
