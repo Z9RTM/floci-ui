@@ -135,6 +135,41 @@ describe('registered adapters honour their schema', () => {
 })
 
 describe('adapter capability advertisements match the runtime reality', () => {
+    test('AWS database advertises instance and snapshot capabilities', () => {
+        const schema = adapterFor('aws', 'database').schema()
+
+        expect(schema.actions).toEqual(['list', 'create', 'delete', 'inspect'])
+        expect(schema.capabilities?.resourceActions?.map(({name, enabled, status, runtimeRequired}) => ({
+            name,
+            enabled,
+            status,
+            runtimeRequired,
+        }))).toEqual([
+            {name: 'list', enabled: true, status: 'available', runtimeRequired: true},
+            {name: 'create', enabled: true, status: 'available', runtimeRequired: true},
+            {name: 'delete', enabled: true, status: 'available', runtimeRequired: true},
+            {name: 'inspect', enabled: true, status: 'available', runtimeRequired: true},
+        ])
+        expect(schema.capabilities?.resourceActions?.find(({name}) => name === 'create')?.label).toBe('Create DB instance')
+        expect(schema.capabilities?.databaseActions).toEqual([
+            {
+                name: 'listSnapshots',
+                label: 'List DB snapshots',
+                enabled: true,
+                status: 'available',
+                runtimeRequired: true,
+            },
+            {
+                name: 'createSnapshot',
+                label: 'Create DB snapshot',
+                enabled: true,
+                status: 'partial',
+                reason: 'The Cloud Proxy operation is available, but the current Floci runtime does not implement CreateDBSnapshot.',
+                runtimeRequired: true,
+            },
+        ])
+    })
+
     test('AWS serverless advertises invoke and implements it', () => {
         const adapter = adapterFor('aws', 'serverless')
         const invoke = adapter.schema().capabilities?.resourceActions?.find((c) => c.name === 'invoke')
