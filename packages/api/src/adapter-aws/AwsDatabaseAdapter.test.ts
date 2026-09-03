@@ -223,6 +223,16 @@ describe('AwsDatabaseAdapter', () => {
         expect(commands).toHaveLength(0)
     })
 
+    test('rejects storage that exceeds the safe integer range before calling RDS', async () => {
+        const {adapter, commands} = adapterWith(async () => ({}))
+
+        await expect(adapter.create({values: {
+            ...validCreateValues,
+            allocatedStorage: '9'.repeat(400),
+        }})).rejects.toBeInstanceOf(ValidationError)
+        expect(commands).toHaveLength(0)
+    })
+
     test('leaves provider failures for the shared AWS error mapper', async () => {
         const providerError = Object.assign(new Error('instance already exists'), {
             name: 'DBInstanceAlreadyExistsFault',

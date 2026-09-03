@@ -171,12 +171,18 @@ function password(value: unknown): string {
 function storageSize(value: unknown): number {
     if (value === undefined || (typeof value === 'string' && !value.trim())) return 20
 
-    const validNumber = typeof value === 'number' && Number.isInteger(value) && value > 0
-    const validString = typeof value === 'string' && /^[1-9][0-9]*$/.test(value.trim())
-    if (!validNumber && !validString) {
+    const normalized = typeof value === 'string' ? value.trim() : value
+    const hasValidSyntax = typeof normalized === 'number'
+        || (typeof normalized === 'string' && /^[1-9][0-9]*$/.test(normalized))
+    if (!hasValidSyntax) {
         throw new ValidationError('allocatedStorage must be a positive integer')
     }
-    return Number(value)
+
+    const storage = Number(normalized)
+    if (!Number.isSafeInteger(storage) || storage <= 0) {
+        throw new ValidationError('allocatedStorage must be a positive integer')
+    }
+    return storage
 }
 
 function stringValue(value: unknown): string {
