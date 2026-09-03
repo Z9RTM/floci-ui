@@ -1,6 +1,11 @@
 import {Hono} from 'hono'
 import type {Context} from 'hono'
-import type {CloudProvider, CloudServiceType, SqlConnectionInput} from '../cloud-spi/types'
+import type {
+    CloudProvider,
+    CloudServiceType,
+    CreateDatabaseSnapshotInput,
+    SqlConnectionInput,
+} from '../cloud-spi/types'
 import {toHttpError} from '../cloud-spi/errors'
 import {isServiceType} from '../cloud-spi/serviceCatalog'
 import {mapAwsSdkError} from '../adapter-aws/awsErrors'
@@ -53,6 +58,27 @@ export function createCloudRoutes(injectedService?: CloudProxyService) {
         }
 
         return c.json(schema)
+    })
+
+    app.get('/:cloud/services/database/snapshots', async (c) => {
+        const cloud = c.req.param('cloud') as CloudProvider
+        if (!isCloudProvider(cloud)) return c.json({error: 'Unknown cloud'}, 404)
+
+        return withRuntime(c, async () => {
+            const snapshots = await svc(c).listDatabaseSnapshots(cloud, c.req.query('instanceIdentifier'))
+            return c.json(snapshots)
+        })
+    })
+
+    app.post('/:cloud/services/database/snapshots', async (c) => {
+        const cloud = c.req.param('cloud') as CloudProvider
+        if (!isCloudProvider(cloud)) return c.json({error: 'Unknown cloud'}, 404)
+
+        return withRuntime(c, async () => {
+            const input = await c.req.json<CreateDatabaseSnapshotInput>()
+            const snapshot = await svc(c).createDatabaseSnapshot(cloud, input)
+            return c.json(snapshot, 201)
+        })
     })
 
     app.get('/:cloud/services/:service/resources', async (c) => {

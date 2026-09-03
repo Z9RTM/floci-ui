@@ -10,9 +10,11 @@ import type {
     CosmosContainer,
     CosmosItem,
     CosmosQueryResult,
+    CreateDatabaseSnapshotInput,
     CreateKubernetesFargateProfileInput,
     CreateKubernetesNodegroupInput,
     CreateResourceInput,
+    DatabaseSnapshot,
     KubernetesFargateProfile,
     KubernetesNodegroup,
     NoSqlItem,
@@ -292,6 +294,18 @@ async invokeResource(
         const adapter = this.requireAdapter(cloud, 'nosql')
         if (!adapter.queryCosmosItems) throw new NotSupportedError(`Cosmos query is not supported for ${cloud}/database`)
         return adapter.queryCosmosItems(databaseId, containerId, query)
+    }
+
+    async listDatabaseSnapshots(cloud: CloudProvider, instanceIdentifier?: string): Promise<DatabaseSnapshot[]> {
+        const adapter = this.requireAdapter(cloud, 'database')
+        if (!adapter.listDatabaseSnapshots) throw new NotSupportedError(`Snapshot listing is not supported for ${cloud}/database`)
+        return adapter.listDatabaseSnapshots(instanceIdentifier)
+    }
+
+    async createDatabaseSnapshot(cloud: CloudProvider, input: CreateDatabaseSnapshotInput): Promise<DatabaseSnapshot> {
+        const adapter = this.requireAdapter(cloud, 'database')
+        if (!adapter.createDatabaseSnapshot) throw new NotSupportedError(`Snapshot creation is not supported for ${cloud}/database`)
+        return adapter.createDatabaseSnapshot(input)
     }
 
     async listSqlDatabases(cloud: CloudProvider, serverId: string, connection: SqlConnectionInput): Promise<SqlDatabase[]> {
