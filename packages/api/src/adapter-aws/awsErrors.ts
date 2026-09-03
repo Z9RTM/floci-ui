@@ -46,6 +46,7 @@ const CONFLICT_NAMES = new Set([
     'BucketAlreadyOwnedByYou',
     'EntityAlreadyExists',
     'EntityAlreadyExistsException',
+    'ResourceExistsException',
     'ResourceInUseException',
     'ResourceConflictException',
     'ConditionalCheckFailedException',

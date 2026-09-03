@@ -546,19 +546,23 @@ describe('service descriptors', () => {
         expect(serverless.reason).toContain('501')
     })
 
-    test('keeps the Secrets Manager page route while taking availability from the adapter', async () => {
+    test('routes AWS secrets to its bespoke page and GCP to the generic explorer', async () => {
         // Availability now comes from adapter registration like every other service,
         // but the absolute route is kept so the card still links to the standalone
         // page instead of Cloud Explorer. Without an adapter it reads coming_soon.
-        const withAdapter = appWithRoutes([mockAdapter('aws'), mockAdapter('aws', {service: 'secrets'})])
+        const withAdapter = appWithRoutes([
+            mockAdapter('aws'),
+            mockAdapter('aws', {service: 'secrets'}),
+            mockAdapter('gcp', {service: 'secrets'}),
+        ])
         const aws = await (await withAdapter.request('/api/clouds/aws/services')).json()
         const bare = await (await appWithRoutes().request('/api/clouds/aws/services')).json()
-        const gcp = await (await appWithRoutes().request('/api/clouds/gcp/services')).json()
+        const gcp = await (await withAdapter.request('/api/clouds/gcp/services')).json()
         const secretsFor = (body: Array<{service: string}>) => body.find((d) => d.service === 'secrets')
 
         expect(secretsFor(aws)).toMatchObject({availability: 'available', route: '/secretsmanager'})
         expect(secretsFor(bare)).toMatchObject({availability: 'coming_soon'})
-        expect(secretsFor(gcp)).toMatchObject({availability: 'coming_soon'})
+        expect(secretsFor(gcp)).toMatchObject({availability: 'available', route: 'secrets'})
     })
 })
 

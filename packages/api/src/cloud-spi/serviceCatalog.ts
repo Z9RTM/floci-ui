@@ -122,14 +122,12 @@ export const SERVICE_CATALOG = {
     },
     secrets: {
         displayName: 'Secrets Manager',
-        displayNameByCloud: {azure: 'Key Vault'},
+        displayNameByCloud: {azure: 'Key Vault', gcp: 'Secret Manager'},
         iconKey: 'secrets',
         group: 'Security',
         order: 10,
-        route: '/secretsmanager',
-        // Azure Key Vault is a normal Cloud Explorer service, so it uses the catalog
-        // slug rather than the legacy standalone page AWS still points at.
-        routeByCloud: {azure: 'secrets'},
+        // AWS retains its dedicated page while Azure and GCP use Cloud Explorer.
+        routeByCloud: {aws: '/secretsmanager'},
     },
     iac: {
         displayName: 'Infrastructure as Code',

@@ -1,6 +1,12 @@
-import {ListSecretsCommand, DescribeSecretCommand, type SecretsManagerClient} from '@aws-sdk/client-secrets-manager'
+import {
+    CreateSecretCommand,
+    DeleteSecretCommand,
+    DescribeSecretCommand,
+    ListSecretsCommand,
+    type SecretsManagerClient,
+} from '@aws-sdk/client-secrets-manager'
 import {secretsManager as defaultSecretsManager} from '../aws'
-import {NotSupportedError} from '../cloud-spi/errors'
+import {ValidationError} from '../cloud-spi/errors'
 import {awsSecretsSchema} from '../cloud-spi/secretsSchema'
 import type {
     CloudResource,
@@ -19,7 +25,8 @@ import type {
  * is a structural guarantee rather than a convention — adding value disclosure
  * would require adding an import.
  *
- * Read-only for the same reason: create would need a value field on the schema.
+ * Create accepts an optional write-only value. It is sent to the runtime once,
+ * but is never read back or placed on a resource.
  */
 export class AwsSecretsAdapter implements CloudServiceAdapter {
     readonly cloud = 'aws' as const
@@ -58,12 +65,26 @@ export class AwsSecretsAdapter implements CloudServiceAdapter {
         }
     }
 
-    async create(_input: CreateResourceInput): Promise<CloudResource> {
-        throw new NotSupportedError('Secret creation is not supported from the dynamic Cloud Explorer.')
+    async create(input: CreateResourceInput): Promise<CloudResource> {
+        const name = stringValue(input.values.secretName ?? input.values.name)
+        const description = stringValue(input.values.description)
+        const secretValue = optionalSecretValue(input.values.secretValue)
+
+        if (!name) throw new ValidationError('secretName is required')
+
+        const res = await this.client.send(new CreateSecretCommand({
+            Name: name,
+            ...(description ? {Description: description} : {}),
+            ...(secretValue !== undefined ? {SecretString: secretValue} : {}),
+        }))
+
+        return toResource({Name: res.Name ?? name, ARN: res.ARN})
     }
 
-    async delete(_id: string): Promise<void> {
-        throw new NotSupportedError('Secret deletion is not supported from the dynamic Cloud Explorer.')
+    async delete(id: string): Promise<void> {
+        // A generic delete action cannot ask for a recovery window. Immediate
+        // deletion avoids leaving a resource visibly present after deletion.
+        await this.client.send(new DeleteSecretCommand({SecretId: id, ForceDeleteWithoutRecovery: true}))
     }
 }
 
@@ -76,6 +97,7 @@ interface SecretMetadata {
     Description?: string
     RotationEnabled?: boolean
     KmsKeyId?: string
+    LastAccessedDate?: Date
     Tags?: {Key?: string; Value?: string}[]
 }
 
@@ -98,9 +120,19 @@ function toResource(secret: SecretMetadata): CloudResource {
             rotationEnabled: secret.RotationEnabled ?? false,
             kmsKeyId: secret.KmsKeyId,
             lastChangedDate: secret.LastChangedDate?.toISOString() ?? null,
+            lastAccessedDate: secret.LastAccessedDate?.toISOString() ?? null,
             tags: (secret.Tags ?? []).map((tag) => ({key: tag.Key, value: tag.Value})),
         },
     }
+}
+
+function stringValue(value: unknown): string {
+    return typeof value === 'string' ? value.trim() : ''
+}
+
+function optionalSecretValue(value: unknown): string | undefined {
+    // Whitespace is valid secret content. Treat only an empty input as absent.
+    return typeof value === 'string' && value.length > 0 ? value : undefined
 }
 
 function filterBySearch(resources: CloudResource[], search?: string): CloudResource[] {
