@@ -1,5 +1,5 @@
 import {ValidationError} from '../cloud-spi/errors'
-import {ListTagsForResourceCommand, type RDSClient} from '@aws-sdk/client-rds'
+import {ListTagsForResourceCommand, type ModifyDBInstanceCommandInput, type RDSClient} from '@aws-sdk/client-rds'
 import {rds as defaultRds} from '../aws'
 import {awsDatabaseSchema} from '../cloud-spi/databaseSchema'
 import type {
@@ -10,12 +10,13 @@ import type {
     DatabaseSnapshot,
     ResourceQuery,
     ServiceSchema,
+    UpdateResourceInput,
 } from '../cloud-spi/types'
 import {rdsService, type RdsInstance, type RdsSnapshot} from '../services/rds'
 
 type RdsServiceShape = Pick<
     typeof rdsService,
-    'listInstances' | 'describeInstance' | 'createInstance' | 'deleteInstance' | 'listSnapshots' | 'createSnapshot' | 'listOrderableInstanceClasses'
+    'listInstances' | 'describeInstance' | 'createInstance' | 'modifyInstance' | 'deleteInstance' | 'listSnapshots' | 'createSnapshot' | 'listOrderableInstanceClasses'
 >
 
 export class AwsDatabaseAdapter implements CloudServiceAdapter {
@@ -72,6 +73,47 @@ export class AwsDatabaseAdapter implements CloudServiceAdapter {
         return this.toResource(instance)
     }
 
+    async update(id: string, input: UpdateResourceInput): Promise<CloudResource> {
+        const values = input.values ?? {}
+        const MasterUserPassword = optionalPassword(values.masterUserPassword)
+        const EnableIAMDatabaseAuthentication = optionalBoolean(
+            values.enableIamDatabaseAuthentication,
+            'enableIamDatabaseAuthentication',
+        )
+        const DBSubnetGroupName = optionalString(values.dbSubnetGroupName)
+        const VpcSecurityGroupIds = optionalCsvList(values.vpcSecurityGroupIds)
+        const OptionGroupName = optionalString(values.optionGroupName)
+        const AutoMinorVersionUpgrade = optionalBoolean(
+            values.autoMinorVersionUpgrade,
+            'autoMinorVersionUpgrade',
+        )
+
+        const hasAnyUpdate =
+            MasterUserPassword !== undefined ||
+            EnableIAMDatabaseAuthentication !== undefined ||
+            DBSubnetGroupName !== undefined ||
+            VpcSecurityGroupIds !== undefined ||
+            OptionGroupName !== undefined ||
+            AutoMinorVersionUpgrade !== undefined
+
+        if (!hasAnyUpdate) {
+            throw new ValidationError('At least one supported field must be updated')
+        }
+
+        const modifyInput: ModifyDBInstanceCommandInput = {
+            DBInstanceIdentifier: id,
+            ...(MasterUserPassword !== undefined && {MasterUserPassword}),
+            ...(EnableIAMDatabaseAuthentication !== undefined && {EnableIAMDatabaseAuthentication}),
+            ...(DBSubnetGroupName !== undefined && {DBSubnetGroupName}),
+            ...(VpcSecurityGroupIds !== undefined && {VpcSecurityGroupIds}),
+            ...(OptionGroupName !== undefined && {OptionGroupName}),
+            ...(AutoMinorVersionUpgrade !== undefined && {AutoMinorVersionUpgrade}),
+        }
+
+        const updated = await this.rdsService_.modifyInstance(modifyInput)
+        return this.toResource(updated)
+    }
+
     async delete(id: string): Promise<void> {
         await this.rdsService_.deleteInstance(id)
     }
@@ -96,36 +138,43 @@ export class AwsDatabaseAdapter implements CloudServiceAdapter {
 
     private async toResource(instance: RdsInstance): Promise<CloudResource> {
         const tags = instance.arn ? await this.getTags(instance.arn) : []
+        const vpcSecurityGroupIds = (instance.vpcSecurityGroups ?? [])
+            .map((group) => group.id)
+            .filter((id): id is string => Boolean(id))
+            .join(', ')
 
         return {
-        id: instance.identifier,
-        name: instance.identifier,
-        cloud: 'aws',
-        service: 'database',
-        type: 'db-instance',
-        region: instance.availabilityZone ?? null,
-        createdAt: instance.createdAt ?? null,
-        status: instance.status ?? null,
-        version: instance.engineVersion ?? null,
-        engine: instance.engine ?? null,
-        instanceClass: instance.instanceClass ?? null,
-        metadata: {
-            arn: instance.arn,
-            resourceId: instance.resourceId,
-            dbName: instance.dbName,
-            masterUsername: instance.masterUsername,
-            allocatedStorage: instance.allocatedStorage,
-            storageType: instance.storageType,
-            endpoint: instance.endpoint,
-            multiAz: instance.multiAz,
-            publiclyAccessible: instance.publiclyAccessible,
-            iamDatabaseAuthenticationEnabled: instance.iamDatabaseAuthenticationEnabled,
-            preferredBackupWindow: instance.preferredBackupWindow,
-            preferredMaintenanceWindow: instance.preferredMaintenanceWindow,
-            vpcSecurityGroups: instance.vpcSecurityGroups,
-            subnetGroup: instance.subnetGroup,
-            tags,
-        },
+            id: instance.identifier,
+            name: instance.identifier,
+            cloud: 'aws',
+            service: 'database',
+            type: 'db-instance',
+            region: instance.availabilityZone ?? null,
+            createdAt: instance.createdAt ?? null,
+            status: instance.status ?? null,
+            version: instance.engineVersion ?? null,
+            engine: instance.engine ?? null,
+            instanceClass: instance.instanceClass ?? null,
+            metadata: {
+                arn: instance.arn,
+                resourceId: instance.resourceId,
+                dbName: instance.dbName,
+                masterUsername: instance.masterUsername,
+                allocatedStorage: instance.allocatedStorage,
+                storageType: instance.storageType,
+                endpoint: instance.endpoint,
+                multiAz: instance.multiAz,
+                publiclyAccessible: instance.publiclyAccessible,
+                iamDatabaseAuthenticationEnabled: instance.iamDatabaseAuthenticationEnabled,
+                preferredBackupWindow: instance.preferredBackupWindow,
+                preferredMaintenanceWindow: instance.preferredMaintenanceWindow,
+                vpcSecurityGroups: instance.vpcSecurityGroups,
+                vpcSecurityGroupIds,
+                subnetGroup: instance.subnetGroup,
+                optionGroupName: instance.optionGroupName,
+                autoMinorVersionUpgrade: instance.autoMinorVersionUpgrade,
+                tags,
+            },
         }
     }
 
@@ -238,4 +287,44 @@ function hasHttpStatus(error: unknown, status: number): boolean {
     if (typeof error !== 'object' || error === null) return false
     const metadata = (error as {$metadata?: {httpStatusCode?: number}}).$metadata
     return metadata?.httpStatusCode === status
+}
+
+function optionalPassword(value: unknown): string | undefined {
+    if (value === undefined || value === null) return undefined
+    const str = String(value)
+    if (str === '') return undefined
+    if (str.length < 8 || str.length > 128) {
+        throw new ValidationError('masterUserPassword must be between 8 and 128 characters')
+    }
+    return str
+}
+
+function optionalBoolean(value: unknown, fieldName: string): boolean | undefined {
+    if (value === undefined || value === null) return undefined
+    if (typeof value === 'boolean') return value
+    if (typeof value === 'string') {
+        const trimmed = value.trim()
+        if (trimmed === '') return undefined
+        if (trimmed === 'true') return true
+        if (trimmed === 'false') return false
+    }
+    throw new ValidationError(`${fieldName} must be a boolean (true or false)`)
+}
+
+function optionalString(value: unknown): string | undefined {
+    if (value === undefined || value === null) return undefined
+    const trimmed = String(value).trim()
+    return trimmed === '' ? undefined : trimmed
+}
+
+function optionalCsvList(value: unknown): string[] | undefined {
+    if (value === undefined || value === null) return undefined
+    if (Array.isArray(value)) {
+        const items = value.map((v) => String(v).trim()).filter(Boolean)
+        return items.length > 0 ? items : undefined
+    }
+    const str = String(value).trim()
+    if (!str) return undefined
+    const items = str.split(',').map((s) => s.trim()).filter(Boolean)
+    return items.length > 0 ? items : undefined
 }

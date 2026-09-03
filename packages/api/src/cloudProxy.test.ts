@@ -157,7 +157,7 @@ describe('adapter capability advertisements match the runtime reality', () => {
     test('AWS database advertises instance and snapshot capabilities', () => {
         const schema = adapterFor('aws', 'database').schema()
 
-        expect(schema.actions).toEqual(['list', 'create', 'delete', 'inspect'])
+        expect(schema.actions).toEqual(['list', 'create', 'update', 'delete', 'inspect'])
         expect(schema.capabilities?.resourceActions?.map(({name, enabled, status, runtimeRequired}) => ({
             name,
             enabled,
@@ -166,10 +166,12 @@ describe('adapter capability advertisements match the runtime reality', () => {
         }))).toEqual([
             {name: 'list', enabled: true, status: 'available', runtimeRequired: true},
             {name: 'create', enabled: true, status: 'available', runtimeRequired: true},
+            {name: 'update', enabled: true, status: 'available', runtimeRequired: true},
             {name: 'delete', enabled: true, status: 'available', runtimeRequired: true},
             {name: 'inspect', enabled: true, status: 'available', runtimeRequired: true},
         ])
         expect(schema.capabilities?.resourceActions?.find(({name}) => name === 'create')?.label).toBe('Create DB instance')
+        expect(schema.capabilities?.resourceActions?.find(({name}) => name === 'update')?.label).toBe('Update DB instance')
         expect(schema.capabilities?.databaseActions).toEqual([
             {
                 name: 'listSnapshots',

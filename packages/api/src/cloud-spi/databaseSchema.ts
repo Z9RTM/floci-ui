@@ -106,11 +106,12 @@ export function awsDatabaseSchema(): ServiceSchema {
                 description: 'One or more SG IDs separated by commas — e.g. sg-111, sg-222',
             },
         ],
-        actions: ['list', 'create', 'delete', 'inspect'],
+        actions: ['list', 'create', 'update', 'delete', 'inspect'],
         capabilities: {
             resourceActions: [
                 {name: 'list', label: 'List DB instances', enabled: true, status: 'available', runtimeRequired: true},
                 {name: 'create', label: 'Create DB instance', enabled: true, status: 'available', runtimeRequired: true},
+                {name: 'update', label: 'Update DB instance', enabled: true, status: 'available', runtimeRequired: true},
                 {name: 'delete', label: 'Delete DB instance', enabled: true, status: 'available', runtimeRequired: true},
                 {name: 'inspect', label: 'Inspect DB instance', enabled: true, status: 'available', runtimeRequired: true},
             ],
@@ -134,6 +135,65 @@ export function awsDatabaseSchema(): ServiceSchema {
         },
         filters: databaseFilters,
         columns: databaseColumns,
+        updateFields: [
+            {
+                name: 'masterUserPassword',
+                label: 'Master Password',
+                type: 'password',
+                required: false,
+                span: true,
+                description: 'Leave blank to keep the current password. Class, storage, engine, and version are omitted because the current emulator does not support modifying them.',
+                validation: {minLength: 8, maxLength: 128},
+            },
+            {
+                name: 'enableIamDatabaseAuthentication',
+                label: 'IAM Database Authentication',
+                type: 'select',
+                required: false,
+                valuePath: 'metadata.iamDatabaseAuthenticationEnabled',
+                description: 'Leave unchanged to keep current setting.',
+                options: [
+                    {label: 'True', value: 'true'},
+                    {label: 'False', value: 'false'},
+                ],
+            },
+            {
+                name: 'dbSubnetGroupName',
+                label: 'DB Subnet Group',
+                type: 'text',
+                required: false,
+                valuePath: 'metadata.subnetGroup.name',
+                description: 'Leave blank to keep current DB subnet group.',
+            },
+            {
+                name: 'vpcSecurityGroupIds',
+                label: 'VPC Security Group IDs',
+                type: 'text',
+                required: false,
+                valuePath: 'metadata.vpcSecurityGroupIds',
+                description: 'Comma-separated security group IDs. Leave blank to keep current security groups.',
+            },
+            {
+                name: 'optionGroupName',
+                label: 'Option Group',
+                type: 'text',
+                required: false,
+                valuePath: 'metadata.optionGroupName',
+                description: 'Leave blank to keep current option group.',
+            },
+            {
+                name: 'autoMinorVersionUpgrade',
+                label: 'Auto Minor Version Upgrade',
+                type: 'select',
+                required: false,
+                valuePath: 'metadata.autoMinorVersionUpgrade',
+                description: 'Leave unchanged to keep current setting.',
+                options: [
+                    {label: 'True', value: 'true'},
+                    {label: 'False', value: 'false'},
+                ],
+            },
+        ],
     }
 }
 
