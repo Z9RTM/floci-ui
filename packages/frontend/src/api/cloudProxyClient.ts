@@ -474,6 +474,22 @@ export async function createDatabaseSnapshot(
   return res.data;
 }
 
+export async function listDatabaseOrderableClasses(
+  cloud: CloudProvider,
+  engine?: string,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  const res = await apiClient.call<string[]>(
+    apiEndpointKeys.clouds.database.orderableClasses.list,
+    requestOptions(cloud, "database", {
+      signal,
+      params: engine ? { engine } : undefined,
+    }),
+    { cloud },
+  );
+  return res.data;
+}
+
 export async function listNoSqlItems(
   cloud: CloudProvider,
   resourceId: string,

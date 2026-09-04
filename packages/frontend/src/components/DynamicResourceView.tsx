@@ -35,6 +35,7 @@ import { AzureSqlPanel } from "@/components/AzureSqlPanel";
 import { ServerlessInvokePanel } from "@/components/ServerlessInvokePanel";
 import { DynamoDbTableExplorer } from "@/components/DynamoDbTableExplorer";
 import { DatabaseSnapshotsPanel } from "@/components/DatabaseSnapshotsPanel";
+import { CreateRdsInstanceForm } from "@/components/CreateRdsInstanceForm";
 
 interface DynamicResourceViewProps {
   cloud: CloudProvider;
@@ -361,6 +362,15 @@ export function DynamicResourceView({
                   <LaunchInstanceForm
                     cloud={cloud}
                     selectedResource={activeSelected}
+                    onSuccess={(resource) => {
+                      setSelected(resource);
+                      setCreateOpen(false);
+                    }}
+                    onCancel={() => setCreateOpen(false)}
+                  />
+                ) : service === "database" && cloud === "aws" ? (
+                  <CreateRdsInstanceForm
+                    cloud={cloud}
                     onSuccess={(resource) => {
                       setSelected(resource);
                       setCreateOpen(false);

@@ -59,6 +59,9 @@ export const apiEndpointKeys = {
         list: "clouds.services.database.snapshots.list",
         create: "clouds.services.database.snapshots.create",
       },
+      orderableClasses: {
+        list: "clouds.services.database.orderable-classes.list",
+      },
     },
     k8s: {
       nodegroups: {
@@ -415,6 +418,14 @@ export const endpointRegistry: EndpointRegistry = new Map([
     {
       path: "/clouds/:cloud/services/database/snapshots",
       method: "POST",
+      telemetry: { service: "cloud-proxy" },
+    },
+  ],
+  [
+    apiEndpointKeys.clouds.database.orderableClasses.list,
+    {
+      path: "/clouds/:cloud/services/database/orderable-classes",
+      method: "GET",
       telemetry: { service: "cloud-proxy" },
     },
   ],
