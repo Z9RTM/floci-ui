@@ -175,7 +175,7 @@ export function CreateRdsInstanceForm({
           {classesQuery.isFetching && (
             <Loader2
               size={11}
-              className="spinning"
+              className="spin"
               style={{ marginLeft: 6, display: "inline-block" }}
             />
           )}
@@ -303,7 +303,7 @@ export function CreateRdsInstanceForm({
           disabled={createMut.isPending}
         >
           {createMut.isPending ? (
-            <Loader2 className="spinning" size={13} />
+            <Loader2 className="spin" size={13} />
           ) : (
             <Plus size={13} />
           )}

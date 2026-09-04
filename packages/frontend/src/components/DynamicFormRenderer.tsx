@@ -10,6 +10,7 @@ interface DynamicFormRendererProps {
     submitLabel?: string
     pendingLabel?: string
     submitError?: string | null
+    onCancel?: () => void
     onSubmit: (values: Record<string, unknown>) => void
 }
 
@@ -21,6 +22,7 @@ export function DynamicFormRenderer({
     submitLabel = 'Create',
     pendingLabel = 'Creating',
     submitError,
+    onCancel,
     onSubmit,
 }: DynamicFormRendererProps) {
     const activeFields = fields ?? schema.fields
@@ -68,10 +70,17 @@ export function DynamicFormRenderer({
                     }}
                 />
             ))}
-            <button className="button primary" type="submit" disabled={isSubmitting}>
-                {submitLabel === 'Create' && <Plus size={14}/>}
-                {isSubmitting ? pendingLabel : submitLabel}
-            </button>
+            <div style={{gridColumn: '1 / -1', justifySelf: 'end', display: 'flex', gap: '8px', alignItems: 'center', marginTop: 4}}>
+                {onCancel && (
+                    <button className="button" type="button" disabled={isSubmitting} onClick={onCancel}>
+                        Cancel
+                    </button>
+                )}
+                <button className="button primary" type="submit" disabled={isSubmitting}>
+                    {submitLabel === 'Create' && <Plus size={14}/>}
+                    {isSubmitting ? pendingLabel : submitLabel}
+                </button>
+            </div>
             {submitError && <div className="form-error" role="alert">{submitError}</div>}
         </form>
     )

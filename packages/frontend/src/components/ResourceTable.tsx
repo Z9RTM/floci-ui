@@ -26,7 +26,7 @@ export function ResourceTable({
 }: ResourceTableProps) {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const canDelete = schema.actions.includes('delete');
-  const canEdit = schema.actions.includes('update') && Boolean(onEdit);
+  const canEdit = schema.actions.includes('update') && Boolean(schema.updateFields?.length) && Boolean(onEdit);
   const hasActions = canDelete || canEdit;
 
   if (resources.length === 0) {
@@ -67,7 +67,10 @@ export function ResourceTable({
                     className="icon-btn"
                     type="button"
                     title={`Edit ${resource.name}`}
-                    onClick={() => onEdit?.(resource)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit?.(resource);
+                    }}
                   >
                     <Pencil size={13} />
                   </button>

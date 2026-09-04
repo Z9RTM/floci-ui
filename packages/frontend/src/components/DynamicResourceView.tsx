@@ -467,6 +467,7 @@ export function DynamicResourceView({
                         ? createMut.error.message
                         : null
                     }
+                    onCancel={() => setCreateOpen(false)}
                     onSubmit={(values) => createMut.mutate(values)}
                   />
                 )}
@@ -602,6 +603,7 @@ export function DynamicResourceView({
               submitLabel="Save Changes"
               pendingLabel="Saving"
               submitError={updateError}
+              onCancel={() => setEditingResource(null)}
               onSubmit={handleEditSubmit}
             />
           </div>

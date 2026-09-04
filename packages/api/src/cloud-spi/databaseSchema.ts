@@ -163,7 +163,7 @@ export function awsDatabaseSchema(): ServiceSchema {
                 type: 'text',
                 required: false,
                 valuePath: 'metadata.subnetGroup.name',
-                description: 'Leave blank to keep current DB subnet group.',
+                description: 'Leave unchanged or blank to keep current DB subnet group.',
             },
             {
                 name: 'vpcSecurityGroupIds',
@@ -171,7 +171,7 @@ export function awsDatabaseSchema(): ServiceSchema {
                 type: 'text',
                 required: false,
                 valuePath: 'metadata.vpcSecurityGroupIds',
-                description: 'Comma-separated security group IDs. Leave blank to keep current security groups.',
+                description: 'Comma-separated security group IDs. Leave unchanged or blank to keep current security groups.',
             },
             {
                 name: 'optionGroupName',
@@ -179,7 +179,7 @@ export function awsDatabaseSchema(): ServiceSchema {
                 type: 'text',
                 required: false,
                 valuePath: 'metadata.optionGroupName',
-                description: 'Leave blank to keep current option group.',
+                description: 'Leave unchanged or blank to keep current option group.',
             },
             {
                 name: 'autoMinorVersionUpgrade',
