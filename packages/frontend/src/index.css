@@ -1300,6 +1300,15 @@ pre,
 .dynamic-field {
     display: grid;
     gap: 6px;
+    min-width: 0;
+}
+
+.dynamic-field .input,
+.dynamic-field .textarea,
+.dynamic-field select,
+.dynamic-field textarea {
+    width: 100%;
+    min-width: 0;
 }
 
 .dynamic-field span {
@@ -1321,6 +1330,11 @@ pre,
 
 .dynamic-field--span {
     grid-column: 1 / -1;
+}
+
+.create-table-modal .dynamic-form {
+    grid-template-columns: 1fr;
+    gap: 14px;
 }
 
 .dynamic-form-group {
