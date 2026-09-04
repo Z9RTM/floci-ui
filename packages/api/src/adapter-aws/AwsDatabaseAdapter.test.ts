@@ -5,6 +5,7 @@ import {
     DeleteDBInstanceCommand,
     DescribeDBInstancesCommand,
     DescribeDBSnapshotsCommand,
+    DescribeOrderableDBInstanceOptionsCommand,
     ListTagsForResourceCommand,
     type RDSClient,
 } from '@aws-sdk/client-rds'
@@ -19,6 +20,7 @@ type RdsCommand =
     | DeleteDBInstanceCommand
     | DescribeDBInstancesCommand
     | DescribeDBSnapshotsCommand
+    | DescribeOrderableDBInstanceOptionsCommand
     | ListTagsForResourceCommand
 
 type Responder = (command: RdsCommand) => unknown | Promise<unknown>
@@ -122,7 +124,7 @@ describe('AwsDatabaseAdapter', () => {
         })
     })
 
-    test('maps all eight create fields', async () => {
+    test('maps all nine create fields including security groups', async () => {
         const {adapter, commands} = adapterWith((command) => instanceResponse(command as CreateDBInstanceCommand))
 
         await adapter.create({values: {
@@ -134,6 +136,7 @@ describe('AwsDatabaseAdapter', () => {
             masterUsername: ' app_user ',
             dbName: ' orders ',
             engineVersion: ' 10.11 ',
+            securityGroupIds: 'sg-12345678, sg-87654321',
         }})
 
         const createCommand = commands[0] as CreateDBInstanceCommand
@@ -146,8 +149,21 @@ describe('AwsDatabaseAdapter', () => {
             MasterUsername: 'app_user',
             DBName: 'orders',
             EngineVersion: '10.11',
+            VpcSecurityGroupIds: ['sg-12345678', 'sg-87654321'],
         })
         expect(MasterUserPassword === validCreateValues.masterUserPassword).toBe(true)
+    })
+
+    test('accepts array of security group ids', async () => {
+        const {adapter, commands} = adapterWith((command) => instanceResponse(command as CreateDBInstanceCommand))
+
+        await adapter.create({values: {
+            ...validCreateValues,
+            securityGroupIds: ['sg-11111111', 'sg-22222222'],
+        }})
+
+        const createCommand = commands[0] as CreateDBInstanceCommand
+        expect(createCommand.input.VpcSecurityGroupIds).toEqual(['sg-11111111', 'sg-22222222'])
     })
 
     test('uses defaults for blank values and omits blank database name and engine version', async () => {
@@ -159,7 +175,6 @@ describe('AwsDatabaseAdapter', () => {
             allocatedStorage: '',
             masterUsername: '   ',
             dbName: ' ',
-            engineVersion: '',
         }})
 
         const input = (commands[0] as CreateDBInstanceCommand).input
@@ -377,5 +392,26 @@ describe('AwsDatabaseAdapter', () => {
             await expect(adapter.createDatabaseSnapshot(input)).rejects.toBeInstanceOf(ValidationError)
         }
         expect(commands).toHaveLength(0)
+    })
+
+    test('lists and deduplicates orderable instance classes', async () => {
+        const {adapter, commands} = adapterWith(async (command) => {
+            expect(command).toBeInstanceOf(DescribeOrderableDBInstanceOptionsCommand)
+            return {
+                OrderableDBInstanceOptions: [
+                    {DBInstanceClass: 'db.t3.micro', Engine: 'postgres'},
+                    {DBInstanceClass: 'db.m8g.large', Engine: 'postgres'},
+                    {DBInstanceClass: 'db.t3.micro', Engine: 'postgres'},
+                ],
+            }
+        })
+
+        const classes = await adapter.listDatabaseOrderableInstanceClasses('postgres')
+
+        expect((commands[0] as DescribeOrderableDBInstanceOptionsCommand).input).toEqual({
+            Engine: 'postgres',
+            Marker: undefined,
+        })
+        expect(classes).toEqual(['db.t3.micro', 'db.m8g.large'])
     })
 })

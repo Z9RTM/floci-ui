@@ -15,7 +15,7 @@ import {rdsService, type RdsInstance, type RdsSnapshot} from '../services/rds'
 
 type RdsServiceShape = Pick<
     typeof rdsService,
-    'listInstances' | 'describeInstance' | 'createInstance' | 'deleteInstance' | 'listSnapshots' | 'createSnapshot'
+    'listInstances' | 'describeInstance' | 'createInstance' | 'deleteInstance' | 'listSnapshots' | 'createSnapshot' | 'listOrderableInstanceClasses'
 >
 
 export class AwsDatabaseAdapter implements CloudServiceAdapter {
@@ -56,6 +56,7 @@ export class AwsDatabaseAdapter implements CloudServiceAdapter {
         const masterUsername = stringValue(values.masterUsername) || 'root'
         const dbName = stringValue(values.dbName) || undefined
         const engineVersion = stringValue(values.engineVersion) || undefined
+        const vpcSecurityGroupIds = securityGroupIds(values.securityGroupIds ?? values.vpcSecurityGroupIds)
 
         const instance = await this.rdsService_.createInstance({
             DBInstanceIdentifier: dbInstanceIdentifier,
@@ -66,6 +67,7 @@ export class AwsDatabaseAdapter implements CloudServiceAdapter {
             MasterUsername: masterUsername,
             DBName: dbName,
             EngineVersion: engineVersion,
+            VpcSecurityGroupIds: vpcSecurityGroupIds,
         })
         return this.toResource(instance)
     }
@@ -85,6 +87,11 @@ export class AwsDatabaseAdapter implements CloudServiceAdapter {
         return snapshotToDatabaseSnapshot(
             await this.rdsService_.createSnapshot(sourceIdentifier, snapshotIdentifier),
         )
+    }
+
+    async listDatabaseOrderableInstanceClasses(engine?: string): Promise<string[]> {
+        const normalizedEngine = stringValue(engine) || 'postgres'
+        return await this.rdsService_.listOrderableInstanceClasses(normalizedEngine)
     }
 
     private async toResource(instance: RdsInstance): Promise<CloudResource> {
@@ -187,6 +194,18 @@ function storageSize(value: unknown): number {
 
 function stringValue(value: unknown): string {
     return typeof value === 'string' ? value.trim() : ''
+}
+
+function securityGroupIds(value: unknown): string[] | undefined {
+    if (Array.isArray(value)) {
+        const list = value.map(stringValue).filter(Boolean)
+        return list.length > 0 ? list : undefined
+    }
+    if (typeof value === 'string') {
+        const list = value.split(',').map((s) => s.trim()).filter(Boolean)
+        return list.length > 0 ? list : undefined
+    }
+    return undefined
 }
 
 function snapshotToDatabaseSnapshot(snapshot: RdsSnapshot): DatabaseSnapshot {

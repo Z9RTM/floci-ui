@@ -4,6 +4,7 @@ import {
   DeleteDBInstanceCommand,
   DescribeDBInstancesCommand,
   DescribeDBSnapshotsCommand,
+  DescribeOrderableDBInstanceOptionsCommand,
   type CreateDBInstanceCommandInput,
   type DBInstance,
   type DBSnapshot,
@@ -201,6 +202,28 @@ export function createRdsService(client: RDSClient = awsClients.rds) {
         }),
       );
       return toRdsSnapshot(res.DBSnapshot ?? {});
+    },
+
+    async listOrderableInstanceClasses(engine: string): Promise<string[]> {
+      const classes = new Set<string>();
+      let marker: string | undefined;
+
+      do {
+        const res = await client.send(
+          new DescribeOrderableDBInstanceOptionsCommand({
+            Engine: engine,
+            Marker: marker,
+          }),
+        );
+        for (const option of res.OrderableDBInstanceOptions ?? []) {
+          if (option.DBInstanceClass) {
+            classes.add(option.DBInstanceClass);
+          }
+        }
+        marker = res.Marker;
+      } while (marker);
+
+      return Array.from(classes);
     },
   };
 }

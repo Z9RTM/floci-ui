@@ -97,6 +97,14 @@ export function awsDatabaseSchema(): ServiceSchema {
                 required: false,
                 defaultValue: '',
             },
+            {
+                name: 'securityGroupIds',
+                label: 'Security Group IDs',
+                type: 'text',
+                required: false,
+                span: true,
+                description: 'One or more SG IDs separated by commas — e.g. sg-111, sg-222',
+            },
         ],
         actions: ['list', 'create', 'delete', 'inspect'],
         capabilities: {

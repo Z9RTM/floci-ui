@@ -81,6 +81,16 @@ export function createCloudRoutes(injectedService?: CloudProxyService) {
         })
     })
 
+    app.get('/:cloud/services/database/orderable-classes', async (c) => {
+        const cloud = c.req.param('cloud') as CloudProvider
+        if (!isCloudProvider(cloud)) return c.json({error: 'Unknown cloud'}, 404)
+
+        return withRuntime(c, async () => {
+            const classes = await svc(c).listDatabaseOrderableInstanceClasses(cloud, c.req.query('engine'))
+            return c.json(classes)
+        })
+    })
+
     app.get('/:cloud/services/:service/resources', async (c) => {
         const cloud = c.req.param('cloud') as CloudProvider
         const serviceType = c.req.param('service') as CloudServiceType

@@ -206,6 +206,26 @@ describe('database snapshot routes', () => {
         expect(body.code).toBe('operation_not_implemented')
         expect(body.detail).toBe('RDS snapshots are unavailable')
     })
+
+    test('lists orderable instance classes with engine filter', async () => {
+        let delegatedEngine: string | undefined
+        const app = appWithRoutes([mockAdapter('aws', {
+            service: 'database',
+            schema: awsDatabaseSchema,
+            listDatabaseOrderableInstanceClasses: async (engine) => {
+                delegatedEngine = engine
+                return ['db.t3.micro', 'db.m8g.large']
+            },
+        })])
+
+        const res = await app.request(
+            '/api/clouds/aws/services/database/orderable-classes?engine=postgres',
+        )
+
+        expect(res.status).toBe(200)
+        expect(await res.json()).toEqual(['db.t3.micro', 'db.m8g.large'])
+        expect(delegatedEngine).toBe('postgres')
+    })
 })
 
 describe('cloud schema routes', () => {

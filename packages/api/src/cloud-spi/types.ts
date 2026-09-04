@@ -384,6 +384,7 @@ export interface CloudServiceAdapter {
     deleteObject?(resourceId: string, key: string): Promise<void>
     listDatabaseSnapshots?(instanceIdentifier?: string): Promise<DatabaseSnapshot[]>
     createDatabaseSnapshot?(input: CreateDatabaseSnapshotInput): Promise<DatabaseSnapshot>
+    listDatabaseOrderableInstanceClasses?(engine?: string): Promise<string[]>
     invoke?(id: string, payload: string): Promise<ServerlessInvokeResult>
     // Lifecycle verbs. Optional because most categories have no notion of them;
     // an adapter that advertises one in `capabilities` must implement it, which

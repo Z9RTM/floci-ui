@@ -308,6 +308,12 @@ async invokeResource(
         return adapter.createDatabaseSnapshot(input)
     }
 
+    async listDatabaseOrderableInstanceClasses(cloud: CloudProvider, engine?: string): Promise<string[]> {
+        const adapter = this.requireAdapter(cloud, 'database')
+        if (!adapter.listDatabaseOrderableInstanceClasses) throw new NotSupportedError(`Orderable instance class listing is not supported for ${cloud}/database`)
+        return adapter.listDatabaseOrderableInstanceClasses(engine)
+    }
+
     async listSqlDatabases(cloud: CloudProvider, serverId: string, connection: SqlConnectionInput): Promise<SqlDatabase[]> {
         const adapter = this.requireAdapter(cloud, 'database')
         if (!adapter.listSqlDatabases) throw new NotSupportedError(`SQL database browsing is not supported for ${cloud}/database`)
