@@ -1,4 +1,4 @@
-import {FormEvent, useEffect, useState} from 'react'
+import {FormEvent, useState} from 'react'
 import {Plus} from 'lucide-react'
 import type {FieldSchema, ServiceSchema} from '@/types/schema'
 
@@ -26,21 +26,10 @@ export function DynamicFormRenderer({
     onSubmit,
 }: DynamicFormRendererProps) {
     const activeFields = fields ?? schema.fields
-    const [values, setValues] = useState<Record<string, string>>({})
+    const [values, setValues] = useState<Record<string, string>>(() =>
+        getInitialFormValues(activeFields, initialValues),
+    )
     const [errors, setErrors] = useState<Record<string, string>>({})
-
-    useEffect(() => {
-        const defaults = defaultValues(activeFields)
-        if (initialValues) {
-            for (const [key, val] of Object.entries(initialValues)) {
-                if (val !== undefined && val !== null) {
-                    defaults[key] = String(val)
-                }
-            }
-        }
-        setValues(defaults)
-        setErrors({})
-    }, [activeFields, initialValues])
 
     function submit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -151,6 +140,21 @@ function FieldInput({field, required, maxLength, value, invalid, messageId, onCh
             placeholder={field.label}
         />
     )
+}
+
+function getInitialFormValues(
+    fields: FieldSchema[],
+    initialValues?: Record<string, unknown>,
+): Record<string, string> {
+    const defaults = defaultValues(fields)
+    if (initialValues) {
+        for (const [key, val] of Object.entries(initialValues)) {
+            if (val !== undefined && val !== null) {
+                defaults[key] = String(val)
+            }
+        }
+    }
+    return defaults
 }
 
 function defaultValues(fields: FieldSchema[]): Record<string, string> {

@@ -458,6 +458,7 @@ export function DynamicResourceView({
                   />
                 ) : (
                   <DynamicFormRenderer
+                    key={`${cloud}:${service}:create`}
                     schema={schema}
                     isSubmitting={createMut.isPending}
                     submitLabel={createResourceLabel}
@@ -596,6 +597,7 @@ export function DynamicResourceView({
               </button>
             </div>
             <DynamicFormRenderer
+              key={editingResource.id}
               schema={schema}
               fields={schema.updateFields}
               initialValues={initialEditValues}

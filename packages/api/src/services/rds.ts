@@ -178,11 +178,18 @@ export function createRdsService(client: RDSClient = awsClients.rds) {
       return toRdsInstance(res.DBInstance ?? {});
     },
 
-    async deleteInstance(identifier: string): Promise<void> {
+    async deleteInstance(
+      identifier: string,
+      skipFinalSnapshot = true,
+      finalDBSnapshotIdentifier?: string,
+    ): Promise<void> {
       await client.send(
         new DeleteDBInstanceCommand({
           DBInstanceIdentifier: identifier,
-          SkipFinalSnapshot: true,
+          SkipFinalSnapshot: skipFinalSnapshot,
+          ...(finalDBSnapshotIdentifier
+            ? { FinalDBSnapshotIdentifier: finalDBSnapshotIdentifier }
+            : {}),
         }),
       );
     },
