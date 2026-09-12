@@ -1,6 +1,12 @@
 // Derived from SERVICE_CATALOG so a new catalog row is a new service type.
 // This type-only cycle with serviceCatalog.ts is erased at compile time.
 import type {CloudServiceType, ServiceGroup} from './serviceCatalog'
+import type {
+    CollectionActionName,
+    DocumentStoreAdapter,
+    ItemActionName,
+    ItemStoreAdapter,
+} from './childCollections'
 
 export type {CloudServiceType, ServiceGroup}
 
@@ -155,6 +161,11 @@ export interface ServiceSchema {
         objectActions?: CapabilitySchema<ObjectActionName>[]
         databaseActions?: CapabilitySchema<DatabaseActionName>[]
         kubernetesActions?: CapabilitySchema<KubernetesActionName>[]
+        // Child levels advertise separately from the resource level because a
+        // store can be readable at the leaf and writable at the collection —
+        // CloudWatch Logs creates streams but cannot delete an event.
+        collectionActions?: CapabilitySchema<CollectionActionName>[]
+        itemActions?: CapabilitySchema<ItemActionName>[]
     }
     filters: FieldSchema[]
     columns: TableColumnSchema[]
@@ -166,7 +177,7 @@ export type KnownResourceType =
     | 'instance' | 'image' | 'vpc' | 'lambda' | 'azure-function' | 'gcp-function'
     | 'secret' | 'iam-user' | 'servicebus-namespace' | 'queue' | 'fifo-queue'
     | 'topic' | 'event-bus' | 'rest-api' | 'stack' | 'email' | 'sql-server'
-    | 'postgres-flexible-server' | 'load-balancer' | 'state-machine' | 'scheduler-job' | 'key' | 'parameter' | 'cloud-run-service'
+    | 'postgres-flexible-server' | 'load-balancer' | 'state-machine' | 'scheduler-job' | 'key' | 'parameter' | 'cloud-run-service' | 'log-group'
 
 export interface CloudResource {
     id: string
@@ -407,6 +418,14 @@ export interface CloudServiceAdapter {
      */
     health?(): Promise<void>
     copyObject?(srcResourceId: string, srcKey: string, destKey: string, destResourceId?: string): Promise<void>
+    /**
+     * Child collections. An adapter implements at most one: `documents` when the
+     * resource holds collections that hold items, `items` when the resource is
+     * itself the collection. Both is a contract violation — the flat item routes
+     * would be ambiguous — and cloudProxy.test.ts enforces that.
+     */
+    documents?: DocumentStoreAdapter
+    items?: ItemStoreAdapter
     listCosmosContainers?(databaseId: string): Promise<CosmosContainer[]>
     createCosmosContainer?(databaseId: string, input: CreateResourceInput): Promise<CosmosContainer>
     deleteCosmosContainer?(databaseId: string, containerId: string): Promise<void>

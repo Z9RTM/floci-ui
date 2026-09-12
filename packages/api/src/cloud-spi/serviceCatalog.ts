@@ -163,6 +163,13 @@ export const SERVICE_CATALOG = {
         group: 'Integration',
         order: 20,
     },
+    logs: {
+        displayName: 'Logs',
+        displayNameByCloud: {aws: 'CloudWatch Logs'},
+        iconKey: 'logs',
+        group: 'Observability',
+        order: 10,
+    },
 } as const satisfies Record<string, ServiceCatalogMetadata>
 
 export type CloudServiceType = keyof typeof SERVICE_CATALOG

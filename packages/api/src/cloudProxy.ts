@@ -4,6 +4,7 @@ import {AwsNetworkingAdapter} from './adapter-aws/AwsNetworkingAdapter'
 import {AwsDatabaseAdapter} from './adapter-aws/AwsDatabaseAdapter'
 import {AwsEksAdapter} from './adapter-aws/AwsEksAdapter'
 import {AwsStorageAdapter} from './adapter-aws/AwsStorageAdapter'
+import {AwsLogsAdapter} from './adapter-aws/AwsLogsAdapter'
 import {AzureNoSqlAdapter} from './adapter-azure/AzureNoSqlAdapter'
 import {AwsDynamoDbAdapter} from './adapter-aws/AwsDynamoDbAdapter'
 import {AzureDatabaseAdapter} from './adapter-azure/AzureDatabaseAdapter'
@@ -60,6 +61,7 @@ export function createCloudAdapterRegistry(accountId?: string | null): CloudAdap
         new AwsComputeAdapter(ec2Service),
         new AwsNetworkingAdapter(ec2Service),
         new AwsServerlessAdapter(clients.lambda),
+        new AwsLogsAdapter(clients.logs),
         new AwsParameterStoreAdapter(clients.ssm),
         new AwsKmsAdapter(clients.kms),
         new AwsStepFunctionsAdapter(clients.sfn),
