@@ -5,9 +5,11 @@ import {
   DescribeDBInstancesCommand,
   DescribeDBSnapshotsCommand,
   DescribeOrderableDBInstanceOptionsCommand,
+  ModifyDBInstanceCommand,
   type CreateDBInstanceCommandInput,
   type DBInstance,
   type DBSnapshot,
+  type ModifyDBInstanceCommandInput,
   type RDSClient,
 } from "@aws-sdk/client-rds";
 import { awsClients } from "../aws";
@@ -58,6 +60,8 @@ export type RdsInstance = {
   endpoint?: RdsEndpoint;
   vpcSecurityGroups: RdsVpcSecurityGroup[];
   subnetGroup?: RdsDbSubnetGroup;
+  optionGroupName?: string;
+  autoMinorVersionUpgrade?: boolean;
 };
 
 export type RdsSnapshot = {
@@ -118,6 +122,8 @@ function toRdsInstance(instance: DBInstance): RdsInstance {
           })),
         }
       : undefined,
+    optionGroupName: instance.OptionGroupMemberships?.[0]?.OptionGroupName,
+    autoMinorVersionUpgrade: instance.AutoMinorVersionUpgrade,
   };
 }
 
@@ -167,11 +173,23 @@ export function createRdsService(client: RDSClient = awsClients.rds) {
       return toRdsInstance(res.DBInstance ?? {});
     },
 
-    async deleteInstance(identifier: string): Promise<void> {
+    async modifyInstance(input: ModifyDBInstanceCommandInput): Promise<RdsInstance> {
+      const res = await client.send(new ModifyDBInstanceCommand(input));
+      return toRdsInstance(res.DBInstance ?? {});
+    },
+
+    async deleteInstance(
+      identifier: string,
+      skipFinalSnapshot = true,
+      finalDBSnapshotIdentifier?: string,
+    ): Promise<void> {
       await client.send(
         new DeleteDBInstanceCommand({
           DBInstanceIdentifier: identifier,
-          SkipFinalSnapshot: true,
+          SkipFinalSnapshot: skipFinalSnapshot,
+          ...(finalDBSnapshotIdentifier
+            ? { FinalDBSnapshotIdentifier: finalDBSnapshotIdentifier }
+            : {}),
         }),
       );
     },

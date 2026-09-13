@@ -70,6 +70,13 @@ export const SERVICE_CATALOG = {
         order: 20,
     },
     serverless: {displayName: 'Serverless', iconKey: 'serverless', group: 'Compute', order: 30},
+    containers: {
+        displayName: 'Containers',
+        displayNameByCloud: {gcp: 'Cloud Run'},
+        iconKey: 'containers',
+        group: 'Compute',
+        order: 40,
+    },
     storage: {displayName: 'Storage', iconKey: 'storage', group: 'Storage', order: 10},
     database: {displayName: 'Database', iconKey: 'database', group: 'Databases', order: 10},
     nosql: {
@@ -120,6 +127,19 @@ export const SERVICE_CATALOG = {
         group: 'Integration',
         order: 20,
     },
+    kms: {
+        displayName: 'Key Management',
+        displayNameByCloud: {aws: 'KMS'},
+        iconKey: 'kms',
+        group: 'Security',
+        order: 20,
+    },
+    parameters: {
+        displayName: 'Parameter Store',
+        iconKey: 'parameters',
+        group: 'Security',
+        order: 30,
+    },
     secrets: {
         displayName: 'Secrets Manager',
         displayNameByCloud: {azure: 'Key Vault', gcp: 'Secret Manager'},
@@ -149,6 +169,13 @@ export const SERVICE_CATALOG = {
         iconKey: 'scheduler',
         group: 'Integration',
         order: 20,
+    },
+    logs: {
+        displayName: 'Logs',
+        displayNameByCloud: {aws: 'CloudWatch Logs'},
+        iconKey: 'logs',
+        group: 'Observability',
+        order: 10,
     },
 } as const satisfies Record<string, ServiceCatalogMetadata>
 

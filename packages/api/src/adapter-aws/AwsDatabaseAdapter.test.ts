@@ -7,6 +7,7 @@ import {
     DescribeDBSnapshotsCommand,
     DescribeOrderableDBInstanceOptionsCommand,
     ListTagsForResourceCommand,
+    ModifyDBInstanceCommand,
     type RDSClient,
 } from '@aws-sdk/client-rds'
 import {ConflictError, ValidationError} from '../cloud-spi/errors'
@@ -22,6 +23,7 @@ type RdsCommand =
     | DescribeDBSnapshotsCommand
     | DescribeOrderableDBInstanceOptionsCommand
     | ListTagsForResourceCommand
+    | ModifyDBInstanceCommand
 
 type Responder = (command: RdsCommand) => unknown | Promise<unknown>
 
@@ -413,5 +415,130 @@ describe('AwsDatabaseAdapter', () => {
             Marker: undefined,
         })
         expect(classes).toEqual(['db.t3.micro', 'db.m8g.large'])
+    })
+
+    test('updates an instance with supported fields and excludes unsupported fields', async () => {
+        const {adapter, commands} = adapterWith(async (command) => {
+            expect(command).toBeInstanceOf(ModifyDBInstanceCommand)
+            return {
+                DBInstance: {
+                    DBInstanceIdentifier: 'orders-db',
+                    Engine: 'postgres',
+                    DBInstanceStatus: 'available',
+                    IAMDatabaseAuthenticationEnabled: false,
+                    DBSubnetGroup: {DBSubnetGroupName: 'private-db'},
+                    VpcSecurityGroups: [{VpcSecurityGroupId: 'sg-1', Status: 'active'}, {VpcSecurityGroupId: 'sg-2', Status: 'active'}],
+                    OptionGroupMemberships: [{OptionGroupName: 'default-postgres', Status: 'in-sync'}],
+                    AutoMinorVersionUpgrade: true,
+                },
+            }
+        })
+
+        const resource = await adapter.update('orders-db', {values: {
+            masterUserPassword: 'new-secret',
+            enableIamDatabaseAuthentication: 'false',
+            dbSubnetGroupName: 'private-db',
+            vpcSecurityGroupIds: 'sg-1, sg-2',
+            optionGroupName: 'default-postgres',
+            autoMinorVersionUpgrade: 'true',
+        }})
+
+        const modifyCommand = commands[0] as ModifyDBInstanceCommand
+        expect(modifyCommand.input).toEqual({
+            DBInstanceIdentifier: 'orders-db',
+            MasterUserPassword: 'new-secret',
+            EnableIAMDatabaseAuthentication: false,
+            DBSubnetGroupName: 'private-db',
+            VpcSecurityGroupIds: ['sg-1', 'sg-2'],
+            OptionGroupName: 'default-postgres',
+            AutoMinorVersionUpgrade: true,
+        })
+        expect(modifyCommand.input).not.toHaveProperty('DBInstanceClass')
+        expect(modifyCommand.input).not.toHaveProperty('AllocatedStorage')
+        expect(modifyCommand.input).not.toHaveProperty('Engine')
+        expect(modifyCommand.input).not.toHaveProperty('EngineVersion')
+        expect(modifyCommand.input).not.toHaveProperty('ApplyImmediately')
+
+        expect(JSON.stringify(resource)).not.toContain('new-secret')
+        expect(resource.metadata.optionGroupName).toBe('default-postgres')
+        expect(resource.metadata.autoMinorVersionUpgrade).toBe(true)
+        expect(resource.metadata.vpcSecurityGroupIds).toBe('sg-1, sg-2')
+    })
+
+    test('accepts boolean literals for boolean update fields', async () => {
+        const {adapter, commands} = adapterWith(async (command) => ({
+            DBInstance: {
+                DBInstanceIdentifier: 'orders-db',
+                Engine: 'postgres',
+                DBInstanceStatus: 'available',
+            },
+        }))
+
+        await adapter.update('orders-db', {values: {
+            enableIamDatabaseAuthentication: true,
+            autoMinorVersionUpgrade: false,
+        }})
+
+        const modifyCommand = commands[0] as ModifyDBInstanceCommand
+        expect(modifyCommand.input.EnableIAMDatabaseAuthentication).toBe(true)
+        expect(modifyCommand.input.AutoMinorVersionUpgrade).toBe(false)
+    })
+
+    test('omits blank strings from update and trims CSV', async () => {
+        const {adapter, commands} = adapterWith(async () => ({
+            DBInstance: {
+                DBInstanceIdentifier: 'orders-db',
+                Engine: 'postgres',
+                DBInstanceStatus: 'available',
+            },
+        }))
+
+        await adapter.update('orders-db', {values: {
+            masterUserPassword: '',
+            enableIamDatabaseAuthentication: '',
+            dbSubnetGroupName: '  ',
+            vpcSecurityGroupIds: '  sg-100 , sg-200  ',
+            optionGroupName: '',
+            autoMinorVersionUpgrade: '',
+        }})
+
+        const modifyCommand = commands[0] as ModifyDBInstanceCommand
+        expect(modifyCommand.input).toEqual({
+            DBInstanceIdentifier: 'orders-db',
+            VpcSecurityGroupIds: ['sg-100', 'sg-200'],
+        })
+    })
+
+    test('rejects malformed booleans and invalid passwords without echoing password', async () => {
+        const {adapter, commands} = adapterWith(async () => ({}))
+
+        await expect(adapter.update('orders-db', {values: {
+            enableIamDatabaseAuthentication: 'maybe',
+        }})).rejects.toBeInstanceOf(ValidationError)
+
+        await expect(adapter.update('orders-db', {values: {
+            masterUserPassword: 'short',
+        }})).rejects.toThrow('8 and 128')
+
+        try {
+            await adapter.update('orders-db', {values: {masterUserPassword: 'short'}})
+        } catch (err) {
+            expect(String(err)).not.toContain('short')
+        }
+
+        expect(commands).toHaveLength(0)
+    })
+
+    test('rejects update requests with zero effective supported changes', async () => {
+        const {adapter, commands} = adapterWith(async () => ({}))
+
+        await expect(adapter.update('orders-db', {values: {}})).rejects.toBeInstanceOf(ValidationError)
+        await expect(adapter.update('orders-db', {values: {
+            masterUserPassword: '',
+            dbSubnetGroupName: '',
+            unsupportedField: 'value',
+        }})).rejects.toBeInstanceOf(ValidationError)
+
+        expect(commands).toHaveLength(0)
     })
 })

@@ -5,7 +5,7 @@ export type KnownResourceType =
     | 'instance' | 'image' | 'vpc' | 'lambda' | 'azure-function' | 'gcp-function'
     | 'dynamodb-table' | 'secret' | 'iam-user' | 'servicebus-namespace'
     | 'queue' | 'fifo-queue' | 'topic' | 'event-bus' | 'rest-api' | 'stack' | 'email'
-    | 'sql-server' | 'postgres-flexible-server' | 'load-balancer' | 'state-machine' | 'scheduler-job';
+    | 'sql-server' | 'postgres-flexible-server' | 'load-balancer' | 'state-machine' | 'scheduler-job' | 'key' | 'parameter' | 'cloud-run-service';
 
 export interface CloudResource {
     id: string

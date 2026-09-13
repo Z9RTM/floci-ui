@@ -315,7 +315,7 @@ export function CreateRdsInstanceForm({
           disabled={createMut.isPending}
         >
           {createMut.isPending ? (
-            <Loader2 className="spinning" size={13} />
+            <Loader2 className="spin" size={13} />
           ) : (
             <Plus size={13} />
           )}
