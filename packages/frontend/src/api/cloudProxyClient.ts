@@ -147,6 +147,25 @@ export async function createCloudResource(
   return res.data;
 }
 
+export async function updateCloudResource(
+  cloud: CloudProvider,
+  service: CloudServiceType,
+  id: string,
+  values: Record<string, unknown>,
+  signal?: AbortSignal,
+): Promise<CloudResource> {
+  const timeout =
+    (cloud === "azure" || cloud === "aws") && service === "database"
+      ? DATABASE_MUTATION_TIMEOUT_MS
+      : undefined;
+  const res = await apiClient.call<CloudResource, Record<string, unknown>>(
+    apiEndpointKeys.clouds.resources.update,
+    requestOptions(cloud, service, { signal, body: values, timeout }),
+    { cloud, service, id },
+  );
+  return res.data;
+}
+
 export async function deleteCloudResource(
   cloud: CloudProvider,
   service: CloudServiceType,
@@ -503,6 +522,20 @@ export async function listNoSqlItems(
   const res = await apiClient.call<NoSqlItem[]>(
     apiEndpointKeys.clouds.nosql.items.list,
     requestOptions(cloud, "nosql", { signal }),
+    { cloud, id: resourceId },
+  );
+  return res.data;
+}
+
+export async function putNoSqlItem(
+  cloud: CloudProvider,
+  resourceId: string,
+  document: Record<string, unknown>,
+  signal?: AbortSignal,
+): Promise<NoSqlItem> {
+  const res = await apiClient.call<NoSqlItem, Record<string, unknown>>(
+    apiEndpointKeys.clouds.nosql.items.put,
+    requestOptions(cloud, "nosql", { signal, body: document }),
     { cloud, id: resourceId },
   );
   return res.data;

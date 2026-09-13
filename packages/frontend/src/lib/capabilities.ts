@@ -8,6 +8,7 @@ export type CapabilityInput<TAction extends CapabilityActionName> = CapabilitySc
 const actionLabels: Record<CapabilityActionName, string> = {
     list: 'List',
     create: 'Create',
+    update: 'Update',
     delete: 'Delete',
     inspect: 'Inspect',
     upload: 'Upload',

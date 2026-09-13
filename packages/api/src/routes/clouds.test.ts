@@ -1,6 +1,13 @@
 import {describe, expect, test} from 'bun:test'
 import {Hono} from 'hono'
 import {NotImplementedByRuntimeError, RuntimeUnavailableError, ValidationError} from '../cloud-spi/errors'
+import type {
+    ChildCollection,
+    ChildItem,
+    CollectionPage,
+    DocumentStoreAdapter,
+    ItemStoreAdapter,
+} from '../cloud-spi/childCollections'
 import {awsDatabaseSchema, azureDatabaseSchema} from '../cloud-spi/databaseSchema'
 import {azureNoSqlSchema} from '../cloud-spi/noSqlSchema'
 import {awsDynamoDbSchema} from '../cloud-spi/dynamodbSchema'
@@ -413,6 +420,29 @@ describe('cloud schema routes', () => {
         expect(res.status).toBe(200)
         expect(body[0].key).toEqual({pk: 'item-1'})
         expect(body[0].document.table).toBe('orders')
+    })
+
+    test('puts a DynamoDB record through the nosql adapter', async () => {
+        const calls: Array<{resourceId: string; document: Record<string, unknown>}> = []
+        const app = appWithRoutes([mockAdapter('aws', {
+            service: 'nosql',
+            schema: awsDynamoDbSchema,
+            putNoSqlItem: async (resourceId, document): Promise<NoSqlItem> => {
+                calls.push({resourceId, document})
+                return {id: JSON.stringify({pk: document.pk}), key: {pk: document.pk}, document}
+            },
+        })])
+
+        const res = await app.request('/api/clouds/aws/services/nosql/resources/orders/items', {
+            method: 'POST',
+            headers: {'content-type': 'application/json'},
+            body: JSON.stringify({pk: 'item-1', name: 'First item'}),
+        })
+        const body = await res.json()
+
+        expect(res.status).toBe(201)
+        expect(body.key).toEqual({pk: 'item-1'})
+        expect(calls).toEqual([{resourceId: 'orders', document: {pk: 'item-1', name: 'First item'}}])
     })
 
     test('clears the SES mailbox through the email adapter', async () => {
@@ -883,5 +913,213 @@ describe('per-service status', () => {
             'create-fargate:demo:default',
             'delete-fargate:demo:default',
         ])
+    })
+
+    test('routes PATCH to the adapter update method', async () => {
+        let updatedId = ''
+        let updatedValues: Record<string, unknown> = {}
+        const app = appWithRoutes([
+            mockAdapter('aws', {
+                service: 'database',
+                schema: awsDatabaseSchema,
+                update: async (id, input) => {
+                    updatedId = id
+                    updatedValues = input.values
+                    return {
+                        id,
+                        name: id,
+                        cloud: 'aws',
+                        service: 'database',
+                        type: 'db-instance',
+                        region: 'us-east-1',
+                        createdAt: null,
+                        metadata: input.values,
+                    }
+                },
+            }),
+        ])
+
+        const res = await app.request('/api/clouds/aws/services/database/resources/orders-db', {
+            method: 'PATCH',
+            headers: {'content-type': 'application/json'},
+            body: JSON.stringify({autoMinorVersionUpgrade: 'true'}),
+        })
+
+        expect(res.status).toBe(200)
+        expect(updatedId).toBe('orders-db')
+        expect(updatedValues).toEqual({autoMinorVersionUpgrade: 'true'})
+    })
+
+    test('returns 501 when the adapter does not implement update', async () => {
+        const app = appWithRoutes([mockAdapter('aws', {service: 'database', schema: awsDatabaseSchema})])
+        const res = await app.request('/api/clouds/aws/services/database/resources/orders-db', {
+            method: 'PATCH',
+            headers: {'content-type': 'application/json'},
+            body: JSON.stringify({autoMinorVersionUpgrade: 'true'}),
+        })
+        expect(res.status).toBe(501)
+    })
+
+    test('maps adapter ValidationError on PATCH to 400', async () => {
+        const app = appWithRoutes([
+            mockAdapter('aws', {
+                service: 'database',
+                schema: awsDatabaseSchema,
+                update: async () => {
+                    throw new ValidationError('Invalid password')
+                },
+            }),
+        ])
+        const res = await app.request('/api/clouds/aws/services/database/resources/orders-db', {
+            method: 'PATCH',
+            headers: {'content-type': 'application/json'},
+            body: JSON.stringify({masterUserPassword: 'short'}),
+        })
+        expect(res.status).toBe(400)
+        const body = await res.json()
+        expect(body.message).toBe('Invalid password')
+    })
+})
+
+const stubCollections: CollectionPage<ChildCollection> = {
+    items: [{id: 'stream-a', name: 'stream-a', parentId: 'group-1', createdAt: null, metadata: {}}],
+    nextCursor: 'cursor-2',
+}
+
+const stubItems: CollectionPage<ChildItem> = {
+    items: [{id: 'event-1', collectionId: 'stream-a', timestamp: null, body: {message: 'hello'}, metadata: {}}],
+    nextCursor: null,
+}
+
+const documentsStub: DocumentStoreAdapter = {
+    listCollections: async () => stubCollections,
+    createCollection: async (resourceId, input) => ({
+        id: String(input.values.name),
+        name: String(input.values.name),
+        parentId: resourceId,
+        createdAt: null,
+        metadata: {},
+    }),
+    deleteCollection: async () => {},
+    listItems: async () => stubItems,
+}
+
+const itemsStub: ItemStoreAdapter = {
+    listItems: async () => stubItems,
+}
+
+describe('child collection routes', () => {
+    test('lists collections and returns the cursor', async () => {
+        const app = appWithRoutes([mockAdapter('aws', {documents: documentsStub})])
+        const res = await app.request('/api/clouds/aws/services/storage/resources/group-1/collections')
+
+        expect(res.status).toBe(200)
+        expect(await res.json()).toEqual({
+            items: [{id: 'stream-a', name: 'stream-a', parentId: 'group-1', createdAt: null, metadata: {}}],
+            nextCursor: 'cursor-2',
+        })
+    })
+
+    test('creates a collection', async () => {
+        const app = appWithRoutes([mockAdapter('aws', {documents: documentsStub})])
+        const res = await app.request('/api/clouds/aws/services/storage/resources/group-1/collections', {
+            method: 'POST',
+            headers: {'content-type': 'application/json'},
+            body: JSON.stringify({name: 'stream-b'}),
+        })
+
+        expect(res.status).toBe(201)
+        expect(await res.json()).toMatchObject({id: 'stream-b', parentId: 'group-1'})
+    })
+
+    test('lists items under a collection', async () => {
+        const app = appWithRoutes([mockAdapter('aws', {documents: documentsStub})])
+        const res = await app.request('/api/clouds/aws/services/storage/resources/group-1/collections/stream-a/items')
+
+        expect(res.status).toBe(200)
+        expect(await res.json()).toEqual({items: stubItems.items, nextCursor: null})
+    })
+
+    test('lists flat items', async () => {
+        const app = appWithRoutes([mockAdapter('aws', {items: itemsStub})])
+        const res = await app.request('/api/clouds/aws/services/storage/resources/table-1/items')
+
+        expect(res.status).toBe(200)
+        expect(await res.json()).toEqual({items: stubItems.items, nextCursor: null})
+    })
+
+    // A documents-only adapter has no flat shape, and vice versa.
+    test('501s when the adapter has the other shape', async () => {
+        const app = appWithRoutes([mockAdapter('aws', {documents: documentsStub})])
+        const res = await app.request('/api/clouds/aws/services/storage/resources/group-1/items')
+
+        expect(res.status).toBe(501)
+    })
+
+    test('501s when the adapter implements no child store', async () => {
+        const app = appWithRoutes([mockAdapter('aws')])
+        const res = await app.request('/api/clouds/aws/services/storage/resources/group-1/collections')
+
+        expect(res.status).toBe(501)
+    })
+
+    test('501s for a write the store does not implement', async () => {
+        const app = appWithRoutes([mockAdapter('aws', {documents: documentsStub})])
+        const res = await app.request('/api/clouds/aws/services/storage/resources/group-1/collections/stream-a/items', {
+            method: 'POST',
+            headers: {'content-type': 'application/json'},
+            body: JSON.stringify({message: 'nope'}),
+        })
+
+        expect(res.status).toBe(501)
+    })
+
+    test('rejects an out-of-range limit', async () => {
+        const app = appWithRoutes([mockAdapter('aws', {documents: documentsStub})])
+        const res = await app.request('/api/clouds/aws/services/storage/resources/group-1/collections?limit=5000')
+
+        expect(res.status).toBe(400)
+    })
+
+    test('passes cursor and limit through to the adapter', async () => {
+        let seen: unknown
+        const app = appWithRoutes([
+            mockAdapter('aws', {
+                documents: {
+                    ...documentsStub,
+                    listCollections: async (_resourceId, page) => {
+                        seen = page
+                        return stubCollections
+                    },
+                },
+            }),
+        ])
+        await app.request('/api/clouds/aws/services/storage/resources/group-1/collections?cursor=abc&limit=25')
+
+        expect(seen).toEqual({cursor: 'abc', limit: 25})
+    })
+
+    // Registration-order regression: the literal `nosql` segment must keep
+    // beating the new `:service` param, or the Cosmos panel silently breaks.
+    test('the existing Cosmos container routes still resolve', async () => {
+        const app = appWithRoutes([
+            mockAdapter('azure', {
+                service: 'nosql',
+                schema: azureNoSqlSchema,
+                listCosmosContainers: async (): Promise<CosmosContainer[]> => [{
+                    id: 'items',
+                    name: 'items',
+                    databaseId: 'appdb',
+                    partitionKeyPath: '/pk',
+                    createdAt: null,
+                    metadata: {},
+                }],
+            }),
+        ])
+
+        const res = await app.request('/api/clouds/azure/services/nosql/resources/appdb/containers')
+
+        expect(res.status).toBe(200)
+        expect(await res.json()).toMatchObject([{id: 'items', databaseId: 'appdb'}])
     })
 })

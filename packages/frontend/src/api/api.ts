@@ -19,6 +19,7 @@ export const apiEndpointKeys = {
       list: "clouds.services.resources.list",
       get: "clouds.services.resources.get",
       create: "clouds.services.resources.create",
+      update: "clouds.services.resources.update",
       delete: "clouds.services.resources.delete",
       invoke: "clouds.services.resources.invoke",
     },
@@ -47,6 +48,7 @@ export const apiEndpointKeys = {
       },
       items: {
         list: "clouds.services.nosql.items.list",
+        put: "clouds.services.nosql.items.put",
       },
     },
     database: {
@@ -294,6 +296,14 @@ export const endpointRegistry: EndpointRegistry = new Map([
     },
   ],
   [
+    apiEndpointKeys.clouds.resources.update,
+    {
+      path: "/clouds/:cloud/services/:service/resources/:id",
+      method: "PATCH",
+      telemetry: { service: "cloud-proxy" },
+    },
+  ],
+  [
     apiEndpointKeys.clouds.resources.delete,
     {
       path: "/clouds/:cloud/services/:service/resources/:id",
@@ -460,6 +470,14 @@ export const endpointRegistry: EndpointRegistry = new Map([
     {
       path: "/clouds/:cloud/services/nosql/resources/:id/items",
       method: "GET",
+      telemetry: { service: "cloud-proxy" },
+    },
+  ],
+  [
+    apiEndpointKeys.clouds.nosql.items.put,
+    {
+      path: "/clouds/:cloud/services/nosql/resources/:id/items",
+      method: "POST",
       telemetry: { service: "cloud-proxy" },
     },
   ],

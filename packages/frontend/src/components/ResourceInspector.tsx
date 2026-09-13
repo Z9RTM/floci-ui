@@ -54,6 +54,7 @@ export function ResourceInspector({
   }
 
   const tags = getTags(resource.metadata.tags);
+  const tagsUnavailable = getBooleanMetadata(resource.metadata.tagsUnavailable) ?? false;
   const versioning = getStringMetadata(resource.metadata.versioning);
   const versioningEnabled = getBooleanMetadata(
     resource.metadata.versioningEnabled,
@@ -95,7 +96,10 @@ export function ResourceInspector({
             value={versioningEnabled ? "Yes" : "No"}
           />
         )}
-        <InspectorItem label="Tags" value={`${tags.length}`} />
+        <InspectorItem
+          label="Tags"
+          value={tagsUnavailable ? "Unavailable" : `${tags.length}`}
+        />
         {isLambda && (
           <>
             <InspectorItem
@@ -115,7 +119,11 @@ export function ResourceInspector({
       </div>
       <section className="inspector-section">
         <p className="metric-label">Tags</p>
-        {tags.length === 0 ? (
+        {tagsUnavailable ? (
+          <p className="muted compact-text">
+            Tags unavailable: the provider denied or failed the tag lookup.
+          </p>
+        ) : tags.length === 0 ? (
           <p className="muted compact-text">
             No tags returned for this resource.
           </p>
