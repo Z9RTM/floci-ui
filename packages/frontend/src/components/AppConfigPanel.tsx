@@ -108,6 +108,7 @@ export function AppConfigPanel({cloud, resource, runtimeReachable}: AppConfigPan
         mutationFn: (environmentId: string) => deleteAppConfigEnvironment(cloud, applicationId ?? '', environmentId),
         onSuccess: (_, environmentId) => {
             if (deployEnvironmentId === environmentId) setDeployEnvironmentId('')
+            if (activeDeployment?.environmentId === environmentId) setActiveDeployment(undefined)
             setConfirmEnvironment(null)
             void qc.invalidateQueries({queryKey: environmentsKey})
         },
