@@ -23,7 +23,7 @@ export function awsAppConfigSchema(): ServiceSchema {
                 required: true,
                 validation: {
                     pattern: '^[A-Za-z0-9._\\-]+$',
-                    maxLength: 64,
+                    maxLength: 255,
                     message: 'Use letters, numbers, periods, hyphens, or underscores.',
                 },
             },

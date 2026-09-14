@@ -182,7 +182,8 @@ export class AwsAppConfigAdapter implements CloudServiceAdapter {
         profileId: string,
         input: CreateResourceInput,
     ): Promise<AppConfigHostedConfigurationVersion> {
-        const content = requiredValue(input.values.content, 'content')
+        const content = input.values.content
+        if (typeof content !== 'string' || !content.trim()) throw new ValidationError('content is required')
         const contentType = requiredValue(input.values.contentType, 'contentType')
         const description = stringValue(input.values.description) || undefined
         const response = await this.appConfig.send(new CreateHostedConfigurationVersionCommand({

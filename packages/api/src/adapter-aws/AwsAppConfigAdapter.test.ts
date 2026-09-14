@@ -52,6 +52,11 @@ describe('AwsAppConfigAdapter', () => {
         expect(adapter.schema().actions).toEqual(['list', 'create', 'delete', 'inspect'])
     })
 
+    test('allows AWS AppConfig application names up to 255 characters', () => {
+        const field = new AwsAppConfigAdapter(stubAppConfig().client).schema().fields[0]
+        expect(field.validation?.maxLength).toBe(255)
+    })
+
     test('lists applications as top-level resources', async () => {
         const {client} = stubAppConfig({ListApplicationsCommand: () => ({Items: [APPLICATION]})})
         const [resource] = await new AwsAppConfigAdapter(client).list()
@@ -144,14 +149,14 @@ describe('AwsAppConfigAdapter', () => {
     test('encodes hosted configuration content as bytes', async () => {
         const {client, sent} = stubAppConfig({CreateHostedConfigurationVersionCommand: () => ({VersionNumber: 2})})
         await new AwsAppConfigAdapter(client).createAppConfigHostedConfigurationVersion('abc123', 'prof999', {
-            values: {content: '{"theme":"dark"}', contentType: 'application/json'},
+            values: {content: '\n{"theme":"dark"}\n', contentType: 'application/json'},
         })
 
         const input = (sent[0] as CreateHostedConfigurationVersionCommand).input
         expect(input.ApplicationId).toBe('abc123')
         expect(input.ConfigurationProfileId).toBe('prof999')
         expect(input.ContentType).toBe('application/json')
-        expect(input.Content).toEqual(new TextEncoder().encode('{"theme":"dark"}'))
+        expect(input.Content).toEqual(new TextEncoder().encode('\n{"theme":"dark"}\n'))
     })
 
     test('lists deployment strategies without an application scope', async () => {
