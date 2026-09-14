@@ -643,6 +643,18 @@ export async function createAppConfigEnvironment(
   return res.data;
 }
 
+export async function deleteAppConfigEnvironment(
+  cloud: CloudProvider,
+  applicationId: string,
+  environmentId: string,
+): Promise<void> {
+  await apiClient.call<void>(
+    apiEndpointKeys.clouds.configuration.environments.delete,
+    requestOptions(cloud, "configuration"),
+    {cloud, id: applicationId, environmentId},
+  );
+}
+
 export async function listAppConfigConfigurationProfiles(
   cloud: CloudProvider,
   applicationId: string,

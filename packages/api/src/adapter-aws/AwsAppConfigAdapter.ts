@@ -7,6 +7,7 @@ import {
     DeleteApplicationCommand,
     DeleteConfigurationProfileCommand,
     DeleteDeploymentStrategyCommand,
+    DeleteEnvironmentCommand,
     DeleteHostedConfigurationVersionCommand,
     GetApplicationCommand,
     GetDeploymentCommand,
@@ -106,6 +107,10 @@ export class AwsAppConfigAdapter implements CloudServiceAdapter {
             await this.appConfig.send(new CreateEnvironmentCommand({ApplicationId: applicationId, Name: name, Description: description})),
             applicationId,
         )
+    }
+
+    async deleteAppConfigEnvironment(applicationId: string, environmentId: string): Promise<void> {
+        await this.appConfig.send(new DeleteEnvironmentCommand({ApplicationId: applicationId, EnvironmentId: environmentId}))
     }
 
     async listAppConfigConfigurationProfiles(applicationId: string): Promise<AppConfigConfigurationProfile[]> {

@@ -320,6 +320,16 @@ export function createCloudRoutes(injectedService?: CloudProxyService) {
         })
     })
 
+    app.delete('/:cloud/services/configuration/resources/:id/environments/:environmentId', async (c) => {
+        const cloud = c.req.param('cloud') as CloudProvider
+        if (!isCloudProvider(cloud)) return c.json({error: 'Unknown cloud'}, 404)
+
+        return withRuntime(c, async () => {
+            await svc(c).deleteAppConfigEnvironment(cloud, c.req.param('id'), c.req.param('environmentId'))
+            return c.json({ok: true})
+        })
+    })
+
     app.get('/:cloud/services/configuration/resources/:id/configuration-profiles', async (c) => {
         const cloud = c.req.param('cloud') as CloudProvider
         if (!isCloudProvider(cloud)) return c.json({error: 'Unknown cloud'}, 404)

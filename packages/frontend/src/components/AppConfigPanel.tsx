@@ -8,6 +8,7 @@ import {
     createAppConfigHostedConfigurationVersion,
     deleteAppConfigConfigurationProfile,
     deleteAppConfigDeploymentStrategy,
+    deleteAppConfigEnvironment,
     deleteAppConfigHostedConfigurationVersion,
     getAppConfigDeployment,
     getAppConfigHostedConfigurationVersion,
@@ -49,6 +50,7 @@ export function AppConfigPanel({cloud, resource, runtimeReachable}: AppConfigPan
     const [confirmProfile, setConfirmProfile] = useState<string | null>(null)
     const [confirmVersion, setConfirmVersion] = useState<number | null>(null)
     const [confirmStrategy, setConfirmStrategy] = useState<string | null>(null)
+    const [confirmEnvironment, setConfirmEnvironment] = useState<string | null>(null)
     const [activeDeployment, setActiveDeployment] = useState<AppConfigDeployment>()
 
     const environmentsKey = useMemo(() => ['appconfig-environments', cloud, applicationId], [cloud, applicationId])
@@ -99,6 +101,14 @@ export function AppConfigPanel({cloud, resource, runtimeReachable}: AppConfigPan
         mutationFn: () => createAppConfigEnvironment(cloud, applicationId ?? '', {name: environmentName}),
         onSuccess: () => {
             setEnvironmentName('')
+            void qc.invalidateQueries({queryKey: environmentsKey})
+        },
+    })
+    const deleteEnvironmentMut = useMutation({
+        mutationFn: (environmentId: string) => deleteAppConfigEnvironment(cloud, applicationId ?? '', environmentId),
+        onSuccess: (_, environmentId) => {
+            if (deployEnvironmentId === environmentId) setDeployEnvironmentId('')
+            setConfirmEnvironment(null)
             void qc.invalidateQueries({queryKey: environmentsKey})
         },
     })
@@ -246,6 +256,7 @@ export function AppConfigPanel({cloud, resource, runtimeReachable}: AppConfigPan
                 </form>
                 {createEnvironmentMut.error instanceof Error && <div className="form-error">{createEnvironmentMut.error.message}</div>}
                 {environmentsQuery.error instanceof Error && <div className="form-error">{environmentsQuery.error.message}</div>}
+                {deleteEnvironmentMut.error instanceof Error && <div className="form-error">{deleteEnvironmentMut.error.message}</div>}
                 <div className="cosmos-list">
                     {environmentsQuery.isLoading && <div className="muted padded">Loading environments</div>}
                     {!environmentsQuery.isLoading && environments.length === 0 && <div className="muted padded">No environments</div>}
@@ -260,6 +271,26 @@ export function AppConfigPanel({cloud, resource, runtimeReachable}: AppConfigPan
                                 <strong>{environment.name}</strong>
                                 <small>{[environment.state, environment.description].filter(Boolean).join(' · ') || 'No details'}</small>
                             </span>
+                            {confirmEnvironment === environment.id ? (
+                                <em
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={(event) => {
+                                        event.stopPropagation()
+                                        deleteEnvironmentMut.mutate(environment.id)
+                                    }}
+                                >
+                                    Confirm
+                                </em>
+                            ) : (
+                                <Trash2
+                                    size={13}
+                                    onClick={(event) => {
+                                        event.stopPropagation()
+                                        setConfirmEnvironment(environment.id)
+                                    }}
+                                />
+                            )}
                         </button>
                     ))}
                 </div>
@@ -279,6 +310,7 @@ export function AppConfigPanel({cloud, resource, runtimeReachable}: AppConfigPan
                 </form>
                 {createProfileMut.error instanceof Error && <div className="form-error">{createProfileMut.error.message}</div>}
                 {profilesQuery.error instanceof Error && <div className="form-error">{profilesQuery.error.message}</div>}
+                {deleteProfileMut.error instanceof Error && <div className="form-error">{deleteProfileMut.error.message}</div>}
                 <div className="cosmos-list">
                     {profilesQuery.isLoading && <div className="muted padded">Loading profiles</div>}
                     {!profilesQuery.isLoading && profiles.length === 0 && <div className="muted padded">No configuration profiles</div>}
@@ -342,6 +374,7 @@ export function AppConfigPanel({cloud, resource, runtimeReachable}: AppConfigPan
                 />
                 {createVersionMut.error instanceof Error && <div className="form-error">{createVersionMut.error.message}</div>}
                 {versionsQuery.error instanceof Error && <div className="form-error">{versionsQuery.error.message}</div>}
+                {deleteVersionMut.error instanceof Error && <div className="form-error">{deleteVersionMut.error.message}</div>}
                 <div className="cosmos-items-table">
                     <table className="table">
                         <thead>
@@ -450,6 +483,7 @@ export function AppConfigPanel({cloud, resource, runtimeReachable}: AppConfigPan
                 </form>
                 {createStrategyMut.error instanceof Error && <div className="form-error">{createStrategyMut.error.message}</div>}
                 {strategiesQuery.error instanceof Error && <div className="form-error">{strategiesQuery.error.message}</div>}
+                {deleteStrategyMut.error instanceof Error && <div className="form-error">{deleteStrategyMut.error.message}</div>}
                 <div className="cosmos-list">
                     {strategiesQuery.isLoading && <div className="muted padded">Loading strategies</div>}
                     {!strategiesQuery.isLoading && strategies.length === 0 && <div className="muted padded">No deployment strategies</div>}

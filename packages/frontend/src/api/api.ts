@@ -86,6 +86,7 @@ export const apiEndpointKeys = {
       environments: {
         list: "clouds.services.configuration.environments.list",
         create: "clouds.services.configuration.environments.create",
+        delete: "clouds.services.configuration.environments.delete",
         deployments: {
           start: "clouds.services.configuration.environments.deployments.start",
           get: "clouds.services.configuration.environments.deployments.get",
@@ -550,6 +551,14 @@ export const endpointRegistry: EndpointRegistry = new Map([
     {
       path: "/clouds/:cloud/services/configuration/resources/:id/environments",
       method: "POST",
+      telemetry: { service: "cloud-proxy" },
+    },
+  ],
+  [
+    apiEndpointKeys.clouds.configuration.environments.delete,
+    {
+      path: "/clouds/:cloud/services/configuration/resources/:id/environments/:environmentId",
+      method: "DELETE",
       telemetry: { service: "cloud-proxy" },
     },
   ],

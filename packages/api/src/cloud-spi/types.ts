@@ -504,6 +504,7 @@ export interface CloudServiceAdapter {
     // in List*) and deployments (which are polled) get a getter.
     listAppConfigEnvironments?(applicationId: string): Promise<AppConfigEnvironment[]>
     createAppConfigEnvironment?(applicationId: string, input: CreateResourceInput): Promise<AppConfigEnvironment>
+    deleteAppConfigEnvironment?(applicationId: string, environmentId: string): Promise<void>
     listAppConfigConfigurationProfiles?(applicationId: string): Promise<AppConfigConfigurationProfile[]>
     createAppConfigConfigurationProfile?(applicationId: string, input: CreateResourceInput): Promise<AppConfigConfigurationProfile>
     deleteAppConfigConfigurationProfile?(applicationId: string, profileId: string): Promise<void>
