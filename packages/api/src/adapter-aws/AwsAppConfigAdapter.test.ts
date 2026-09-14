@@ -3,6 +3,7 @@ import {
     CreateApplicationCommand,
     CreateEnvironmentCommand,
     CreateHostedConfigurationVersionCommand,
+    DeleteEnvironmentCommand,
     GetApplicationCommand,
     GetHostedConfigurationVersionCommand,
     ListApplicationsCommand,
@@ -114,6 +115,13 @@ describe('AwsAppConfigAdapter', () => {
 
         expect(environment.id).toBe('env777')
         expect((sent[0] as CreateEnvironmentCommand).input).toEqual({ApplicationId: 'abc123', Name: 'dev'})
+    })
+
+    test('deletes an environment by application and environment id', async () => {
+        const {client, sent} = stubAppConfig()
+        await new AwsAppConfigAdapter(client).deleteAppConfigEnvironment('abc123', 'env777')
+
+        expect((sent[0] as DeleteEnvironmentCommand).input).toEqual({ApplicationId: 'abc123', EnvironmentId: 'env777'})
     })
 
     test('lists configuration profiles with type and location', async () => {

@@ -498,6 +498,10 @@ async invokeResource(
         return this.appConfigAdapter(cloud).createAppConfigEnvironment!(applicationId, input)
     }
 
+    async deleteAppConfigEnvironment(cloud: CloudProvider, applicationId: string, environmentId: string): Promise<void> {
+        await this.appConfigAdapter(cloud).deleteAppConfigEnvironment!(applicationId, environmentId)
+    }
+
     async listAppConfigConfigurationProfiles(cloud: CloudProvider, applicationId: string): Promise<AppConfigConfigurationProfile[]> {
         return this.appConfigAdapter(cloud).listAppConfigConfigurationProfiles!(applicationId)
     }
