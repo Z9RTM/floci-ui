@@ -36,6 +36,7 @@ import { CosmosNoSqlPanel } from "@/components/CosmosNoSqlPanel";
 import { AzureSqlPanel } from "@/components/AzureSqlPanel";
 import { ServerlessInvokePanel } from "@/components/ServerlessInvokePanel";
 import { DynamoDbTableExplorer } from "@/components/DynamoDbTableExplorer";
+import { LogsExplorerPanel } from "@/components/LogsExplorerPanel";
 import { DatabaseSnapshotsPanel } from "@/components/DatabaseSnapshotsPanel";
 import { CreateRdsInstanceForm } from "@/components/CreateRdsInstanceForm";
 
@@ -559,6 +560,13 @@ export function DynamicResourceView({
       )}
       {service === "nosql" && cloud === "aws" && (
         <DynamoDbTableExplorer
+          cloud={cloud}
+          resource={activeSelected}
+          runtimeReachable={canUseRuntime}
+        />
+      )}
+      {service === "logs" && cloud === "aws" && (
+        <LogsExplorerPanel
           cloud={cloud}
           resource={activeSelected}
           runtimeReachable={canUseRuntime}
