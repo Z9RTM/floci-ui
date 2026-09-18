@@ -32,10 +32,9 @@ import type {
 } from "@/types/cloud";
 import type { CloudResource, StorageObject } from "@/types/resource";
 import type { ServiceSchema } from "@/types/schema";
-import { CosmosNoSqlPanel } from "@/components/CosmosNoSqlPanel";
-import { AzureSqlPanel } from "@/components/AzureSqlPanel";
 import { ServerlessInvokePanel } from "@/components/ServerlessInvokePanel";
-import { DynamoDbTableExplorer } from "@/components/DynamoDbTableExplorer";
+import { dataExplorerPath } from "@/lib/dataExplorer";
+import { LogsExplorerPanel } from "@/components/LogsExplorerPanel";
 import { DatabaseSnapshotsPanel } from "@/components/DatabaseSnapshotsPanel";
 import { CreateRdsInstanceForm } from "@/components/CreateRdsInstanceForm";
 import { AppConfigPanel } from "@/components/AppConfigPanel";
@@ -535,23 +534,6 @@ export function DynamicResourceView({
           runtimeReachable={runtimeReachable}
         />
       )}
-      {service === "nosql" && cloud === "azure" && activeSelected?.type === "cosmos-database" && (
-        <CosmosNoSqlPanel
-          cloud={cloud}
-          resource={activeSelected}
-          runtimeReachable={canUseRuntime}
-        />
-      )}
-      {service === "database" &&
-        cloud === "azure" &&
-        (activeSelected?.type === "sql-server" ||
-          activeSelected?.type === "postgres-flexible-server") && (
-        <AzureSqlPanel
-          cloud={cloud}
-          resource={activeSelected}
-          runtimeReachable={canUseRuntime}
-        />
-      )}
       {service === "serverless" && (
         <ServerlessInvokePanel
           cloud={cloud}
@@ -559,8 +541,8 @@ export function DynamicResourceView({
           runtimeReachable={canUseRuntime}
         />
       )}
-      {service === "nosql" && cloud === "aws" && (
-        <DynamoDbTableExplorer
+      {service === "logs" && cloud === "aws" && (
+        <LogsExplorerPanel
           cloud={cloud}
           resource={activeSelected}
           runtimeReachable={canUseRuntime}
@@ -780,6 +762,7 @@ function renderResourceSurface({
       onSelect={onSelect}
       onEdit={onEdit}
       onDelete={onDelete}
+      dataPath={dataExplorerPath}
     />
   );
 }

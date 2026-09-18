@@ -82,6 +82,12 @@ export const apiEndpointKeys = {
         clear: "clouds.services.email.inbox.clear",
       },
     },
+    childCollections: {
+      list: "clouds.services.childCollections.list",
+      items: {
+        list: "clouds.services.childCollections.items.list",
+      },
+    },
     configuration: {
       environments: {
         list: "clouds.services.configuration.environments.list",
@@ -659,6 +665,22 @@ export const endpointRegistry: EndpointRegistry = new Map([
     },
   ],
 
+  [
+    apiEndpointKeys.clouds.childCollections.list,
+    {
+      path: "/clouds/:cloud/services/:service/resources/:id/collections",
+      method: "GET",
+      telemetry: { service: "cloud-proxy" },
+    },
+  ],
+  [
+    apiEndpointKeys.clouds.childCollections.items.list,
+    {
+      path: "/clouds/:cloud/services/:service/resources/:id/collections/:cid/items",
+      method: "GET",
+      telemetry: { service: "cloud-proxy" },
+    },
+  ],
   // AWS EKS
   [
     apiEndpointKeys.aws.eks.clusters.list,
